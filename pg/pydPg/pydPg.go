@@ -1,4 +1,4 @@
-package pg
+package pydPg
 
 import (
 	"bufio"
@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"github.com/before80/go/cfg"
 	"github.com/before80/go/contants"
-	"github.com/before80/go/js"
+	"github.com/before80/go/js/pydJs"
 	"github.com/before80/go/myf"
 	"github.com/before80/go/wind"
 	"github.com/go-rod/rod"
@@ -32,7 +32,7 @@ func GetBarMenus(page *rod.Page, url string) (barMenuInfos []MenuInfo, err error
 	page.MustWaitLoad()
 
 	var result *proto.RuntimeRemoteObject
-	result, err = page.Eval(fmt.Sprintf(js.GetBarMenusJs, url))
+	result, err = page.Eval(fmt.Sprintf(pydJs.GetBarMenusJs, url))
 	if err != nil {
 		return nil, fmt.Errorf("在网页%s中执行GetBarMenusJs遇到错误：%v", url, err)
 	}
@@ -101,7 +101,7 @@ func InsertBarMenuPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, page *rod
 	// 判断是否还有第二级菜单
 	var result *proto.RuntimeRemoteObject
 
-	result, err = page.Eval(fmt.Sprintf(js.GetSecondMenusJs, barMenuInfo.Url))
+	result, err = page.Eval(fmt.Sprintf(pydJs.GetSecondMenusJs, barMenuInfo.Url))
 	if err != nil {
 		return nil, fmt.Errorf("在网页%s中执行GetSecondMenusJs遇到错误：%v", barMenuInfo.Url, err)
 	}
@@ -118,7 +118,7 @@ func InsertBarMenuPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, page *rod
 		return nil, fmt.Errorf("在网页%s中执行json.Unmarshal遇到错误: %v", barMenuInfo.Url, err)
 	}
 
-	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, js.GetDetailPageDataJs))
+	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, pydJs.GetDetailPageDataJs))
 	if err != nil {
 		return nil, fmt.Errorf("在网页%s中执行GetDetailPageDataJs遇到错误：%v", barMenuInfo.Url, err)
 	}
@@ -134,7 +134,7 @@ func InsertBarMenuPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, page *rod
 }
 
 func InsertSecondMenuPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, secondMenuInfo MenuInfo, page *rod.Page) (err error) {
-	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, js.GetDetailPageDataJs))
+	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, pydJs.GetDetailPageDataJs))
 	if err != nil {
 		return fmt.Errorf("在网页%s中执行GetDetailPageDataJs遇到错误：%v", secondMenuInfo.Url, err)
 	}
@@ -149,7 +149,7 @@ func InsertSecondMenuPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, second
 }
 
 func InsertThirdMenuPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, secondMenuInfo MenuInfo, thirdMenuInfo MenuInfo, page *rod.Page) (err error) {
-	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, js.GetDetailPageDataJs))
+	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, pydJs.GetDetailPageDataJs))
 	if err != nil {
 		return fmt.Errorf("在网页%s中执行GetDetailPageDataJs遇到错误：%v", thirdMenuInfo.Url, err)
 	}
@@ -173,7 +173,7 @@ func InsertSecondDetailPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, seco
 	page.MustNavigate(secondMenuInfo.Url)
 	page.MustWaitLoad()
 
-	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, js.GetDetailPageDataJs))
+	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, pydJs.GetDetailPageDataJs))
 	if err != nil {
 		return fmt.Errorf("在网页%s中执行GetDetailPageDataJs遇到错误：%v", secondMenuInfo.Url, err)
 	}
@@ -196,7 +196,7 @@ func InsertThirdDetailPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, secon
 	page.MustNavigate(thirdMenuInfo.Url)
 	page.MustWaitLoad()
 
-	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, js.GetDetailPageDataJs))
+	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, pydJs.GetDetailPageDataJs))
 	if err != nil {
 		return fmt.Errorf("在网页%s中执行GetDetailPageDataJs遇到错误：%v", thirdMenuInfo.Url, err)
 	}
@@ -220,7 +220,7 @@ func InsertFourthDetailPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, seco
 	page.MustNavigate(fourthMenuInfo.Url)
 	page.MustWaitLoad()
 
-	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, js.GetDetailPageDataJs))
+	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, pydJs.GetDetailPageDataJs))
 	if err != nil {
 		return fmt.Errorf("在网页%s中执行GetDetailPageDataJs遇到错误：%v", fourthMenuInfo.Url, err)
 	}
@@ -359,7 +359,7 @@ func GetThirdLevelMenu(secondMenuInfo MenuInfo, page *rod.Page) (thirdMenuInfos 
 
 	page.MustNavigate(secondMenuInfo.Url)
 	page.MustWaitLoad()
-	return evalJsGetSubMenuInfos(page, "GetThirdMenusJs", js.GetThirdMenusJs, secondMenuInfo.Url)
+	return evalJsGetSubMenuInfos(page, "GetThirdMenusJs", pydJs.GetThirdMenusJs, secondMenuInfo.Url)
 }
 
 func GetFourthLevelMenu(thirdMenuInfo MenuInfo, page *rod.Page) (fourthMenuInfos []MenuInfo, err error) {
@@ -371,7 +371,7 @@ func GetFourthLevelMenu(thirdMenuInfo MenuInfo, page *rod.Page) (fourthMenuInfos
 
 	page.MustNavigate(thirdMenuInfo.Url)
 	page.MustWaitLoad()
-	return evalJsGetSubMenuInfos(page, "GetFourthMenusJs", js.GetFourthMenusJs, thirdMenuInfo.Url)
+	return evalJsGetSubMenuInfos(page, "GetFourthMenusJs", pydJs.GetFourthMenusJs, thirdMenuInfo.Url)
 }
 
 func evalJsGetSubMenuInfos(page *rod.Page, jsName, js, pageUrl string) (subMenuInfos []MenuInfo, err error) {

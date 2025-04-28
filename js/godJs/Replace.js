@@ -252,9 +252,6 @@ function replaceExistCodeBlock() {
     }
 }
 
-
-
-
 removeHeader();
 removeFooter();
 removeGoMainAside();
@@ -266,5 +263,5 @@ removeUnitDirectories();
 replaceUnitDocTitle();
 addHeaderAnchorAndRemoveHeaderLink();
 modifyInTypeFuncHeaderLevel();
-replaceExampleCodeBlock();
 replaceExistCodeBlock();
+replaceExampleCodeBlock();

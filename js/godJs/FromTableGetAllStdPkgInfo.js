@@ -1,4 +1,4 @@
-function fromTableGetAllPkgInfo() {
+() => {
     // const btn = document.querySelector("button.js-showInternalDirectories")
     // if (btn) {
     //     if (btn.textContent.trim() === "Show internal") {
@@ -73,10 +73,9 @@ function fromTableGetAllPkgInfo() {
                     children: [],
                 })
             }
-        }        
+        }
     })
 
     console.log("pkgInfos=", pkgInfos)
+    return pkgInfos
 }
-
-fromTableGetAllPkgInfo();

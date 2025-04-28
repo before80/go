@@ -1,4 +1,4 @@
-package js
+package pydJs
 
 import _ "embed"
 
