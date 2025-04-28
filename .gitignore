@@ -1,0 +1,8 @@
+.idea
+.vscode/*
+*.exe
+logs/*
+markdown/do.md
+output/*
+output0/*
+output1/*

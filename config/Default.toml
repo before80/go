@@ -1,0 +1,33 @@
+# 等待打开下一个网页的秒数
+wait_open_next_page_seconds = 2
+# 等待typora打开窗口的秒数
+wait_typora_open_seconds = 2
+# 等待typora保存的秒数
+wait_typora_save_seconds = 2
+# 等待typora粘贴到保存之间的秒数
+wait_typora_copied_to_save_seconds = 2
+# 等待typora关闭窗口的秒数
+wait_typora_close_seconds = 2
+# 唯一markdown文件路径
+unique_md_filepath = "D:\\GPrjs\\py\\markdown\\do.md"
+#
+output_filepath = "D:\\GPrjs\\py\\output"
+# 是否使用代理来打开网页，1=使用，2=不使用
+use_proxy = 2
+# 代理使用的协议：http/https/socks4/socks5
+proxy_scheme = "https"
+# 代理服务器的主机名
+proxy_host = ""
+# 代理服务器的端口
+proxy_port = 1235
+# 代理服务器的用户名
+proxy_username = ""
+# 代理服务器的用户密码
+proxy_password = ""
+
+# 间隔测试时间：单位为秒
+interval_second = 5
+# 浏览器宽度
+browser_width = 1200
+# 浏览器高度
+browser_height = 1500
