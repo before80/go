@@ -106,6 +106,9 @@ function addHeaderAnchorAndRemoveHeaderLink() {
     const ftts = document.querySelectorAll(".Documentation-functionHeader,.Documentation-typeHeader,.Documentation-typeMethodHeader,.Documentation-typeFuncHeader")
     if (ftts.length > 0) {
         ftts.forEach(ftt => {
+            let level = ftt.tagName.replace("H", "")
+            ftt.setAttribute("data-is-fmt", "yes")
+            ftt.setAttribute("data-l", `${level}`)
             let versionStr = ""
             const outerSpan = ftt.querySelector("span.Documentation-sinceVersion")
             if (outerSpan) {
@@ -141,8 +144,8 @@ function modifyInTypeFuncHeaderLevel() {
         fms.forEach(fm => {
             const newLevel = parseInt(fm.tagName.replace("H", "")) + 1
             const newH = document.createElement(`H${newLevel}`)
-            newH.setAttribute("data-h", `${newLevel}`)
-            newH.setAttribute("data-is-new-header", "no")
+            newH.setAttribute("data-l", `${newLevel}`)
+            newH.setAttribute("data-is-fmt", "yes")
             while(fm.firstChild) {
                 newH.appendChild(fm.firstChild)
             }
@@ -155,14 +158,72 @@ function modifyInTypeFuncHeaderLevel() {
 // 替换Example中的代码块
 function replaceExampleCodeBlock() {
     const des = document.querySelectorAll(".Documentation-exampleDetails")
+    const noTopHLevel = 2
+
     if (des.length > 0) {
         des.forEach(de => {
-            const ta = de.querySelector(".Documentation-exampleDetailsBody > textarea")
-            if (ta) {
+            const deb = de.querySelector(".Documentation-exampleDetailsBody")
+            if (deb) {
+                const ta = deb.querySelector(":scope > textarea")
+                const pre = deb.querySelector(":scope > pre")
+                let foundH = false
+                let curMustSetHLevel = 4
+                let anchor = ""
                 // 找到最近h标签，并进行判断是否需要增加一级
+                let prevE = de.previousElementSibling;
+                // h标签中的标识符名称
+                let idName = ""
+                while (prevE && !foundH) {
+                    if (['H1', 'H2', 'H3', 'H4', 'H5'].includes(prevE.tagName)) {
+                        let dataIsExample = prevE.getAttribute("data-is-example")
+                        if (dataIsExample) {
+                            prevE = prevE.previousElementSibling;
+                            continue
+                        }
 
-                // 获取h标签中的标识符名称
+                        let dataIsFmt = prevE.getAttribute("data-is-fmt")
 
+                        if (dataIsFmt) {
+                            foundH = true;
+                            let dataL = prevE.getAttribute("data-l")
+                            let idE = prevE.querySelector("a.Documentation-source")
+                            if (idE) {
+                                idName = idE.textContent.trim()
+                            }
+                            if (dataL) {
+                                curMustSetHLevel = parseInt(dataL) + 1
+                            }
+                        }
+                    } else {
+                        prevE = prevE.previousElementSibling;
+                    }
+                }
+                if (!foundH) {
+                    curMustSetHLevel = noTopHLevel
+                }
+
+                // 获取Example原有锚
+                const a = de.querySelector(".Documentation-exampleDetailsHeader a")
+                if (a) {
+                    anchor = a.href.split("#")[1].trim()
+                }
+
+                const div = document.createElement("div")
+                const newH = document.createElement(`h${curMustSetHLevel}`)
+                newH.textContent= `${idName} Example{#${anchor}}`
+                newH.setAttribute("data-is-example", "yes")
+                newH.setAttribute("data-l", `${curMustSetHLevel}`)
+                div.appendChild(newH)
+                // 获取代码块内容，并转换成html字符串
+                div.insertAdjacentHTML("beforeend", convertCodeToHtml(ta.value, 'go'))
+                // 插入一个换行
+                div.insertAdjacentHTML("beforeend", "<br><p>&nbsp;&nbsp;&nbsp;&nbsp;Result：</p><br>")
+
+                // 获取代码块的执行结果，并转换成html字符串
+                div.insertAdjacentHTML("beforeend", convertCodeToHtml(pre.textContent, 'go'))
+
+                de.insertAdjacentElement("afterend", div)
+                de.remove()
             }
         })
     }
@@ -176,7 +237,7 @@ function convertCodeToHtml(code,lang) {
     converted = converted.replace(/\n\}$/, '<br><br>}');
     converted = converted.replace(/\n/g, '<br>');
     // 使用 <pre> 和 <code> 标签包裹代码，并添加语言类名
-    const html = `<pre><code class="text-sm text-gray-800 bg-gray-200 p-4 rounded-md language-${lang}">${converted}</code></pre>`;
+    const html = `<div><pre><code class="text-sm text-gray-800 bg-gray-200 p-4 rounded-md language-${lang}">${converted}</code></pre></div>`;
     return html;
 }
 
@@ -203,7 +264,7 @@ removeDocumentationExamples();
 removeUnitFiles();
 removeUnitDirectories();
 replaceUnitDocTitle();
-replaceExampleCodeBlock();
-replaceExistCodeBlock();
 addHeaderAnchorAndRemoveHeaderLink();
 modifyInTypeFuncHeaderLevel();
+replaceExampleCodeBlock();
+replaceExistCodeBlock();
