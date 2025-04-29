@@ -1,4 +1,11 @@
-
+function agreeCookie() {
+    const btn = document.querySelector(".Cookie-notice button.go-Button")
+    if (btn) {
+        btn.click()
+        setTimeout(function () {
+        }, 50)
+    }
+}
 
 function removeHeader() {
     const headers = document.querySelectorAll("header")
@@ -9,6 +16,12 @@ function removeHeader() {
     }
 }
 
+function removeRenderedFor() {
+    const ut = document.querySelector(".UnitBuildContext-titleContext")
+    if (ut) {
+        ut.remove()
+    }
+}
 
 function removeDocumentationIndex() {
     const indexE = document.querySelector("section.Documentation-index")
@@ -67,7 +80,6 @@ function replaceUnitDocTitle() {
         }
     }
 }
-
 
 
 // 往标题中修改锚
@@ -146,7 +158,7 @@ function modifyInTypeFuncHeaderLevel() {
             const newH = document.createElement(`H${newLevel}`)
             newH.setAttribute("data-l", `${newLevel}`)
             newH.setAttribute("data-is-fmt", "yes")
-            while(fm.firstChild) {
+            while (fm.firstChild) {
                 newH.appendChild(fm.firstChild)
             }
             fm.insertAdjacentElement("afterend", newH)
@@ -167,10 +179,11 @@ function replaceExampleCodeBlock() {
                 const ta = deb.querySelector(":scope > textarea")
                 const pre = deb.querySelector(":scope > pre")
                 let foundH = false
-                let curMustSetHLevel = 4
+                let curMustSetHLevel = 3
                 let anchor = ""
                 // 找到最近h标签，并进行判断是否需要增加一级
                 let prevE = de.previousElementSibling;
+                let deParent = de.parentElement
                 // h标签中的标识符名称
                 let idName = ""
                 while (prevE && !foundH) {
@@ -195,7 +208,11 @@ function replaceExampleCodeBlock() {
                             }
                         }
                     } else {
-                        prevE = prevE.previousElementSibling;
+                        if (!prevE.previousElementSibling) {
+                            prevE = prevE.previousElementSibling;
+                        } else {
+                            break
+                        }
                     }
                 }
                 if (!foundH) {
@@ -210,7 +227,7 @@ function replaceExampleCodeBlock() {
 
                 const div = document.createElement("div")
                 const newH = document.createElement(`h${curMustSetHLevel}`)
-                newH.textContent= `${idName} Example{#${anchor}}`
+                newH.textContent = `${idName} Example{#${anchor}}`
                 newH.setAttribute("data-is-example", "yes")
                 newH.setAttribute("data-l", `${curMustSetHLevel}`)
                 div.appendChild(newH)
@@ -229,7 +246,7 @@ function replaceExampleCodeBlock() {
     }
 }
 
-function convertCodeToHtml(code,lang) {
+function convertCodeToHtml(code, lang) {
     // 将 \t 替换为四个空格
     let converted = code.replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
     // 将 \n 替换为 <br> 标签
@@ -252,7 +269,9 @@ function replaceExistCodeBlock() {
     }
 }
 
+agreeCookie()
 removeHeader();
+removeRenderedFor();
 removeFooter();
 removeGoMainAside();
 removeGoMainNav();

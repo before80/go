@@ -1,14 +1,15 @@
 package pydPg
 
 import (
-	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/before80/go/cfg"
 	"github.com/before80/go/contants"
 	"github.com/before80/go/js/pydJs"
-	"github.com/before80/go/myf"
+	"github.com/before80/go/pg"
+	"github.com/before80/go/tr"
+	"github.com/before80/go/tr/pydTr"
 	"github.com/before80/go/wind"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/proto"
@@ -20,6 +21,12 @@ import (
 	"strings"
 	"time"
 )
+
+type MenuInfo struct {
+	MenuName string `json:"menu_name"`
+	Filename string `json:"filename"`
+	Url      string `json:"url"`
+}
 
 func GetBarMenus(page *rod.Page, url string) (barMenuInfos []MenuInfo, err error) {
 	defer func() {
@@ -50,12 +57,6 @@ func GetBarMenus(page *rod.Page, url string) (barMenuInfos []MenuInfo, err error
 	}
 
 	return
-}
-
-type MenuInfo struct {
-	MenuName string `json:"menu_name"`
-	Filename string `json:"filename"`
-	Url      string `json:"url"`
 }
 
 func InitBarIndexMdFile(index int, barMenuInfo MenuInfo) (err error) {
@@ -129,7 +130,7 @@ func InsertBarMenuPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, page *rod
 	}
 
 	indexMdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, "_index.md")
-	err = insertAnyPageData(indexMdFp)
+	err = pg.InsertAnyPageData(indexMdFp)
 	return
 }
 
@@ -144,7 +145,7 @@ func InsertSecondMenuPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, second
 		return err
 	}
 	indexMdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, secondMenuInfo.Filename, "_index.md")
-	err = insertAnyPageData(indexMdFp)
+	err = pg.InsertAnyPageData(indexMdFp)
 	return
 }
 
@@ -160,7 +161,7 @@ func InsertThirdMenuPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, secondM
 	}
 
 	indexMdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, secondMenuInfo.Filename, thirdMenuInfo.Filename, "_index.md")
-	err = insertAnyPageData(indexMdFp)
+	err = pg.InsertAnyPageData(indexMdFp)
 	return
 }
 
@@ -183,7 +184,7 @@ func InsertSecondDetailPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, seco
 		return err
 	}
 	mdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, secondMenuInfo.Filename+".md")
-	err = insertAnyPageData(mdFp)
+	err = pg.InsertAnyPageData(mdFp)
 	return
 }
 
@@ -207,7 +208,7 @@ func InsertThirdDetailPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, secon
 	}
 
 	mdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, secondMenuInfo.Filename, thirdMenuInfo.Filename+".md")
-	err = insertAnyPageData(mdFp)
+	err = pg.InsertAnyPageData(mdFp)
 	return
 }
 
@@ -231,7 +232,7 @@ func InsertFourthDetailPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, seco
 	}
 
 	mdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, secondMenuInfo.Filename, thirdMenuInfo.Filename, fourthMenuInfo.Filename+".md")
-	err = insertAnyPageData(mdFp)
+	err = pg.InsertAnyPageData(mdFp)
 	return
 }
 
@@ -243,7 +244,7 @@ func dealUniqueMd(browserHwnd win.HWND, curUrl, step string) (err error) {
 	mdFilename := spSlice[len(spSlice)-1]
 
 	// 清空唯一共用的markdown文件的文件内容
-	err = myf.TruncFileContent(uniqueMdFilepath)
+	err = tr.TruncFileContent(uniqueMdFilepath)
 	if err != nil {
 		return fmt.Errorf("在处理%s=%s时，清空%q文件内容出现错误：%v", step, curUrl, uniqueMdFilepath, err)
 	}
@@ -272,71 +273,10 @@ func dealUniqueMd(browserHwnd win.HWND, curUrl, step string) (err error) {
 	time.Sleep(time.Duration(cfg.Default.WaitTyporaSaveSeconds) * time.Second)
 	robotgo.CloseWindow()
 	time.Sleep(time.Duration(cfg.Default.WaitTyporaCloseSeconds) * time.Second)
-	_, err = myf.ReplaceMarkdownFileContent(uniqueMdFilepath)
+	_, err = pydTr.ReplaceMarkdownFileContent(uniqueMdFilepath)
 	if err != nil {
 		return fmt.Errorf("在处理%s=%s时，替换出现错误：%v", step, curUrl, err)
 	}
-	return nil
-}
-
-// insertAnyPageData 插入页面数据
-func insertAnyPageData(fpDst string) (err error) {
-	fpSrc := cfg.Default.UniqueMdFilepath
-	var dstFile, srcFile *os.File
-	dstFile, err = os.OpenFile(fpDst, os.O_RDWR, 0666)
-	if err != nil {
-		return fmt.Errorf("打开文件 %s 时出错: %v\n", fpDst, err)
-	}
-	defer dstFile.Close()
-
-	var dstFileSomeLines []string
-	foundShouLu := false
-	scanner := bufio.NewScanner(dstFile)
-	for scanner.Scan() {
-		line := scanner.Text()
-		dstFileSomeLines = append(dstFileSomeLines, line)
-		if strings.HasPrefix(line, "> 收录时间：") {
-			foundShouLu = true
-			break
-		}
-	}
-	if !foundShouLu {
-		return fmt.Errorf("未找到类型为 %s 的起始行", "> 收录时间：")
-	}
-
-	// 读取uniqueMd文件中的内容
-	srcFile, err = os.OpenFile(fpSrc, os.O_RDWR, 0666)
-	if err != nil {
-		return fmt.Errorf("打开文件 %s 时出错: %v\n", fpSrc, err)
-	}
-	defer srcFile.Close()
-
-	var srcFileTotalLines []string
-	scanner = bufio.NewScanner(srcFile)
-	for scanner.Scan() {
-		srcFileTotalLines = append(srcFileTotalLines, scanner.Text())
-	}
-
-	var newTotalLines []string
-	newTotalLines = append(newTotalLines, dstFileSomeLines...)
-	newTotalLines = append(newTotalLines, []string{"", ""}...) // 插入两个空行
-	newTotalLines = append(newTotalLines, srcFileTotalLines...)
-
-	_ = dstFile.Truncate(0)   // 清空
-	_, _ = dstFile.Seek(0, 0) // 从头开始写入
-	writer := bufio.NewWriter(dstFile)
-	for _, line := range newTotalLines {
-		_, err = writer.WriteString(line + "\n")
-		if err != nil {
-			panic(err)
-		}
-	}
-
-	err = writer.Flush()
-	if err != nil {
-		panic(err)
-	}
-
 	return nil
 }
 

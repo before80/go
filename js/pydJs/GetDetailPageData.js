@@ -156,7 +156,11 @@ function setSectionDlLevel() {
                     foundH = true;
                     sectionLevel = parseInt(prevE.tagName.replace("H", ""));
                 } else {
-                    prevE = prevE.previousElementSibling;
+                    if (!prevE.previousElementSibling) {
+                        prevE = prevE.previousElementSibling;
+                    } else {
+                        break
+                    }
                 }
             }
         }

@@ -8,7 +8,7 @@
     // }
     const table = document.querySelector("table.UnitDirectories-table")
     let pkgInfos = []
-    let curTopPkgName = ""
+    let curTopFilename = ""
     if (!table) {
         return
     }
@@ -16,33 +16,40 @@
     if (trs.length === 0) {
         return
     }
+    let topMenuIndex = 0
+    let subMenuIndex = 0
     trs.forEach(tr => {
         console.log("run here 2")
         let desc = ""
-        let pkgName = ""
+        let menuName = ""
+        let filename = ""
         let url = ""
-        let children = []
         const td1 = tr.querySelector(":scope > td:first-child")
-        let isSub = false
+        let isTop = 2
         if (td1) {
             const div1 = td1.querySelector(":scope > div:first-child")
             if (div1) {
                 if (div1.getAttribute("class") === "UnitDirectories-subdirectory") {
-                    isSub = true
                     if (td1.querySelector("a")) {
-                        pkgName = td1.querySelector("a").textContent.trim()
+                        menuName = td1.querySelector("a").textContent.trim()
+                        filename = menuName.replace(/[\/\s]/g, '_')
                         url = td1.querySelector("a").href.trim()
+                        subMenuIndex++
                     }
                 } else {
                     if (td1.querySelector("a")) {
-                        pkgName = td1.querySelector("a").textContent.trim()
+                        menuName = td1.querySelector("a").textContent.trim()
+                        filename = menuName.replace(/[\/\s]/g, '_')
                         url = td1.querySelector("a").href.trim()
-                        curTopPkgName = pkgName
+                        curTopFilename = filename
+                        isTop = 1
                     } else {
                         if (td1.querySelector("span")) {
-                            pkgName = td1.querySelector("span").textContent.trim()
+                            menuName = td1.querySelector("span").textContent.trim()
+                            filename = menuName.replace(/[\/\s]/g, '_')
                             url = ""
-                            curTopPkgName = pkgName
+                            curTopFilename = filename
+                            isTop = 1
                         }
                     }
                 }
@@ -52,26 +59,38 @@
         if (td2) {
             desc = td2.textContent.trim()
         }
-        if (pkgName) {
-            if (isSub) {
+        if (filename) {
+            if (isTop === 1) {
+                subMenuIndex = 0
+                if (topMenuIndex === 0) {
+                    topMenuIndex++
+                }
                 pkgInfos.push({
-                    pkg_name: pkgName,
+                    menu_name: menuName,
+                    filename: filename,
                     url: url,
                     desc: desc,
+                    is_top: isTop,
+                    index: topMenuIndex,
+                    p_filename: "",
+                    children: [],
+                })
+            } else {
+                pkgInfos.push({
+                    menu_name: menuName,
+                    filename: filename,
+                    url: url,
+                    desc: desc,
+                    is_top: isTop,
+                    index: subMenuIndex,
+                    p_filename: curTopFilename,
                     children: [],
                 })
                 for (let i = 0; i < pkgInfos.length; i++) {
-                    if (pkgInfos[i].pkg_name === curTopPkgName) {
-                        pkgInfos[i].children.push(pkgName);
+                    if (pkgInfos[i].filename === curTopFilename) {
+                        pkgInfos[i].children.push(filename);
                     }
                 }
-            } else {
-                pkgInfos.push({
-                    pkg_name: pkgName,
-                    url: url,
-                    desc: desc,
-                    children: [],
-                })
             }
         }
     })
