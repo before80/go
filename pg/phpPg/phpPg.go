@@ -1,4 +1,4 @@
-package godPg
+package phpPg
 
 import (
 	"encoding/json"
@@ -7,6 +7,7 @@ import (
 	"github.com/before80/go/cfg"
 	"github.com/before80/go/contants"
 	"github.com/before80/go/js/godJs"
+	"github.com/before80/go/js/phpdJs"
 	"github.com/before80/go/pg"
 	"github.com/before80/go/tr"
 	"github.com/before80/go/wind"
@@ -22,18 +23,14 @@ import (
 )
 
 type MenuInfo struct {
-	MenuName             string   `json:"menu_name"`
-	Filename             string   `json:"filename"`
-	Url                  string   `json:"url"`
-	Desc                 string   `json:"desc"`
-	IsTop                int      `json:"is_top"`
-	Index                int      `json:"index"`
-	PFilename            string   `json:"p_filename"`
-	ChildrenMenuFilename []string `json:"children"`
+	MenuName string `json:"menu_name"`
+	Filename string `json:"filename"`
+	Url      string `json:"url"`
+	Index    int    `json:"index"`
 }
 
-// GetAllStdPkgInfo 获取所有标准库的pkg信息
-func GetAllStdPkgInfo(page *rod.Page, url string) (stdPkgMenuInfos []MenuInfo, err error) {
+// GetAllFirstMenuInfo 获取所有第一级菜单信息
+func GetAllFirstMenuInfo(page *rod.Page, url string) (firstMenuInfos []MenuInfo, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("获取allStdPkgInfo时遇到错误：%v", r)
@@ -44,9 +41,9 @@ func GetAllStdPkgInfo(page *rod.Page, url string) (stdPkgMenuInfos []MenuInfo, e
 	page.MustWaitLoad()
 
 	var result *proto.RuntimeRemoteObject
-	result, err = page.Eval(godJs.FromTableGetAllStdPkgInfoJs)
+	result, err = page.Eval(phpdJs.GetAllFirstMenuJs)
 	if err != nil {
-		return nil, fmt.Errorf("在网页%s中执行GetBarMenusJs遇到错误：%v", url, err)
+		return nil, fmt.Errorf("在网页%s中执行phpdJs.GetAllFirstMenuJs遇到错误：%v", url, err)
 	}
 
 	// 将结果序列化为 JSON 字节
@@ -56,14 +53,14 @@ func GetAllStdPkgInfo(page *rod.Page, url string) (stdPkgMenuInfos []MenuInfo, e
 	}
 
 	// 将 JSON 数据反序列化到结构体中
-	err = json.Unmarshal(jsonBytes, &stdPkgMenuInfos)
+	err = json.Unmarshal(jsonBytes, &firstMenuInfos)
 	if err != nil {
 		return nil, fmt.Errorf("在网页%s中执行json.Unmarshal遇到错误: %v", url, err)
 	}
 	return
 }
 
-func InitStdPkgMdFile(pkgMenu MenuInfo) (err error) {
+func InitMdFile(pkgMenu MenuInfo) (err error) {
 	var dir string
 	//isBar := false
 	useUnderlineIndexMd := false

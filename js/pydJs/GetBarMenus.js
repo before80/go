@@ -10,7 +10,7 @@
         if (ps.length > 0) {
             ps.forEach(p => {
                 const a = p.querySelector('a')
-                const menu_name = a.textContent.trim()
+                const menu_name = a.textContent.trim().replace(/[\"\'\/\\]/g,'')
                 const url = a.href.trim()
                 let filename = url.replace(baseUrl, '')
                     .replace(/\/index\.html$/, '')

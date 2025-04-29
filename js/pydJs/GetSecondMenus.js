@@ -6,7 +6,7 @@
     if (tocTreeUl) {
         tocTreeUl.querySelectorAll(":scope > li").forEach(li => {
             const a = li.querySelector(':scope > a')
-            const menu_name = a.textContent.trim()
+            const menu_name = a.textContent.trim().replace(/[\"\'\/\\]/g,'')
             const url = a.href.trim()
             const names = url.split('/')
             let filename = names[names.length - 1].replace(/\.html$/, '')

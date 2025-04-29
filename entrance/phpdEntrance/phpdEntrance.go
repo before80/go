@@ -29,7 +29,7 @@ func Do() {
 	defer browser.MustClose()
 	// 创建新页面
 	page = browser.MustPage()
-
+	var stdPkgMenuInfos []phpd.MenuInfo
 	_ = page
 
 }
