@@ -10,7 +10,6 @@ import (
 	"github.com/go-vgo/robotgo"
 	"github.com/tailscale/win"
 	"strconv"
-	"time"
 )
 
 func Do() {
@@ -61,8 +60,7 @@ func Do() {
 			return
 		}
 		lg.InfoToFileAndStdOut(fmt.Sprintf("插入数据完成%s-%s\n", stdPkgMenuInfo.Filename, stdPkgMenuInfo.Url))
-
 	}
 	lg.InfoToFileAndStdOut("已全部完成\n")
-	time.Sleep(1000 * time.Second)
+	_ = browser.Close()
 }
