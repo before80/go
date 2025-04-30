@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/before80/go/bs"
 	"github.com/before80/go/lg"
+	"github.com/before80/go/pg/phpPg"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/defaults"
 	"github.com/tailscale/win"
@@ -29,7 +30,15 @@ func Do() {
 	defer browser.MustClose()
 	// 创建新页面
 	page = browser.MustPage()
-	var stdPkgMenuInfos []phpd.MenuInfo
-	_ = page
+	var firstMenuInfos []phpPg.MenuInfo
+	firstMenuInfos, err = phpPg.GetAllFirstMenuInfo(page, "https://www.php.net/manual/zh/index.php")
 
+	for _, firstMenuInfo := range firstMenuInfos {
+		err = phpPg.InitFirstMenuMdFile(browserHwnd, firstMenuInfo, page)
+		if err != nil {
+			lg.ErrorToFileAndStdOutWithSleepSecond(fmt.Sprintf("%v\n", err), 3)
+			return
+		}
+	}
+	lg.InfoToFileAndStdOut("已全部处理完成！")
 }

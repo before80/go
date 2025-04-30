@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"github.com/before80/go/cfg"
 	"github.com/before80/go/contants"
-	"github.com/before80/go/js/godJs"
 	"github.com/before80/go/js/phpdJs"
 	"github.com/before80/go/pg"
 	"github.com/before80/go/tr"
@@ -60,54 +59,165 @@ func GetAllFirstMenuInfo(page *rod.Page, url string) (firstMenuInfos []MenuInfo,
 	return
 }
 
-func InitMdFile(pkgMenu MenuInfo) (err error) {
-	var dir string
+func InitFirstMenuMdFile(browserHwnd win.HWND, firstMenuInfo MenuInfo, page *rod.Page) (err error) {
+	var dir, curDir string
+	var subMenuInfos []MenuInfo
 	//isBar := false
 	useUnderlineIndexMd := false
-	baseDirname := "go_std_pkg"
-	if pkgMenu.IsTop == 1 {
-		if len(pkgMenu.ChildrenMenuFilename) > 0 {
-			useUnderlineIndexMd = true
-			dir = filepath.Join(contants.OutputFolderName, baseDirname, pkgMenu.Filename)
-		} else {
-			dir = filepath.Join(contants.OutputFolderName, baseDirname)
+	prefixDirname := "php_"
+
+	// 判断是否还有二级菜单
+	page.MustNavigate(firstMenuInfo.Url)
+	page.MustWaitLoad()
+	var result *proto.RuntimeRemoteObject
+	result, err = page.Eval(phpdJs.InDetailPageGetMenuJs)
+	if err != nil {
+		return fmt.Errorf("在网页%s中执行phpdJs.InDetailPageGetMenuJs遇到错误：%v", firstMenuInfo.Url, err)
+	}
+
+	// 将结果序列化为 JSON 字节
+	jsonBytes, err := json.Marshal(result.Value)
+	if err != nil {
+		return fmt.Errorf("在网页%s中执行json.Marshal遇到错误: %v", firstMenuInfo.Url, err)
+	}
+
+	// 将 JSON 数据反序列化到结构体中
+	err = json.Unmarshal(jsonBytes, &subMenuInfos)
+	if err != nil {
+		return fmt.Errorf("在网页%s中执行json.Unmarshal遇到错误: %v", firstMenuInfo.Url, err)
+	}
+
+	if len(subMenuInfos) > 0 {
+		useUnderlineIndexMd = true
+		dir = filepath.Join(contants.OutputFolderName, prefixDirname+firstMenuInfo.Filename)
+		curDir = dir
+		err = preInitMdFile(firstMenuInfo.Index, true, useUnderlineIndexMd, dir, firstMenuInfo)
+		if err != nil {
+			return
+		}
+		// 插入内容
+		mdFilePath := dir + "_index.md"
+		err = InsertDetailPageData(browserHwnd, mdFilePath, firstMenuInfo, page)
+		if err != nil {
+			return
 		}
 	} else {
-		dir = filepath.Join(contants.OutputFolderName, baseDirname, pkgMenu.PFilename)
+		useUnderlineIndexMd = true
+		dir = filepath.Join(contants.OutputFolderName, prefixDirname+firstMenuInfo.Filename)
+		curDir = dir
+		err = preInitMdFile(firstMenuInfo.Index, true, useUnderlineIndexMd, dir, firstMenuInfo)
+		if err != nil {
+			return
+		}
+		// 插入内容
+		mdFilePath := dir + "_index.md"
+		err = InsertDetailPageData(browserHwnd, mdFilePath, firstMenuInfo, page)
+		if err != nil {
+			return
+		}
 	}
-	return preInitMdFile(pkgMenu.Index, false, useUnderlineIndexMd, dir, pkgMenu)
+
+	if len(subMenuInfos) > 0 {
+		err = DealSubMenuInfo(browserHwnd, subMenuInfos, curDir, page)
+		if err != nil {
+			return
+		}
+	}
+	return
 }
 
-func InsertPkgDetailPageData(browserHwnd win.HWND, pkgMenu MenuInfo, page *rod.Page) (err error) {
+func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir string, page *rod.Page) (err error) {
+	if len(subMenuInfos) > 0 {
+		var subSubMenuInfos []MenuInfo
+		useUnderlineIndexMd := false
+		var dir, subCurDir string
+		for _, subMenuInfo := range subMenuInfos {
+			subSubMenuInfos = []MenuInfo{}
+			// 判断是否还有二级菜单
+			page.MustNavigate(subMenuInfo.Url)
+			page.MustWaitLoad()
+			var result *proto.RuntimeRemoteObject
+			result, err = page.Eval(phpdJs.InDetailPageGetMenuJs)
+			if err != nil {
+				return fmt.Errorf("在网页%s中执行phpdJs.InDetailPageGetMenuJs遇到错误：%v", subMenuInfo.Url, err)
+			}
+
+			// 将结果序列化为 JSON 字节
+			var jsonBytes []byte
+			jsonBytes, err = json.Marshal(result.Value)
+			if err != nil {
+				return fmt.Errorf("在网页%s中执行json.Marshal遇到错误: %v", subMenuInfo.Url, err)
+			}
+
+			// 将 JSON 数据反序列化到结构体中
+			err = json.Unmarshal(jsonBytes, &subSubMenuInfos)
+			if err != nil {
+				return fmt.Errorf("在网页%s中执行json.Unmarshal遇到错误: %v", subMenuInfo.Url, err)
+			}
+
+			if len(subSubMenuInfos) > 0 {
+				useUnderlineIndexMd = true
+				dir = filepath.Join(curDir, subMenuInfo.Filename)
+				subCurDir = dir
+				err = preInitMdFile(subMenuInfo.Index, false, useUnderlineIndexMd, dir, subMenuInfo)
+				if err != nil {
+					return
+				}
+				// 插入内容
+				mdFilePath := dir + "_index.md"
+				err = InsertDetailPageData(browserHwnd, mdFilePath, subMenuInfo, page)
+				if err != nil {
+					return
+				}
+			} else {
+				useUnderlineIndexMd = false
+				dir = curDir
+				subCurDir = dir
+				err = preInitMdFile(subMenuInfo.Index, false, useUnderlineIndexMd, dir, subMenuInfo)
+				if err != nil {
+					return
+				}
+				// 插入内容
+				mdFilePath := dir + subMenuInfo.Filename + ".md"
+				err = InsertDetailPageData(browserHwnd, mdFilePath, subMenuInfo, page)
+				if err != nil {
+					return
+				}
+			}
+
+			if err != nil {
+				return
+			}
+
+			if len(subSubMenuInfos) > 0 {
+				err = DealSubMenuInfo(browserHwnd, subSubMenuInfos, subCurDir, page)
+				if err != nil {
+					return
+				}
+			}
+		}
+	}
+	return
+}
+
+func InsertDetailPageData(browserHwnd win.HWND, mdFilePath string, menuInfo MenuInfo, page *rod.Page) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("插入detailPage=%s数据时遇到错误：%v", pkgMenu.Url, r)
+			err = fmt.Errorf("插入detailPage=%s数据时遇到错误：%v", menuInfo.Url, r)
 		}
 	}()
 
-	page.MustNavigate(pkgMenu.Url)
-	page.MustWaitLoad()
-	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, godJs.ReplaceJs))
+	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, phpdJs.ReplaceJs))
 	if err != nil {
-		return fmt.Errorf("在网页%s中执行godJs.ReplaceJs遇到错误：%v", pkgMenu.Url, err)
+		return fmt.Errorf("在网页%s中执行phpdJs.ReplaceJs遇到错误：%v", menuInfo.Url, err)
 	}
 
-	err = dealUniqueMd(browserHwnd, pkgMenu.Url, "detailPage")
+	err = dealUniqueMd(browserHwnd, menuInfo.Url, "detailPage")
 	if err != nil {
 		return err
 	}
-	var mdFp string
-	baseDirname := "go_std_pkg"
-	if pkgMenu.IsTop == 1 {
-		if len(pkgMenu.ChildrenMenuFilename) > 0 {
-			mdFp = filepath.Join(contants.OutputFolderName, baseDirname, pkgMenu.Filename, "_index.md")
-		} else {
-			mdFp = filepath.Join(contants.OutputFolderName, baseDirname, pkgMenu.Filename+".md")
-		}
-	} else {
-		mdFp = filepath.Join(contants.OutputFolderName, baseDirname, pkgMenu.PFilename, pkgMenu.Filename+".md")
-	}
-	err = pg.InsertAnyPageData(mdFp)
+
+	err = pg.InsertAnyPageData(mdFilePath)
 	return
 }
 
