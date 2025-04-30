@@ -7,8 +7,10 @@ import (
 	"github.com/before80/go/cfg"
 	"github.com/before80/go/contants"
 	"github.com/before80/go/js/phpdJs"
+	"github.com/before80/go/lg"
 	"github.com/before80/go/pg"
 	"github.com/before80/go/tr"
+	"github.com/before80/go/tr/phpdTr"
 	"github.com/before80/go/wind"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/proto"
@@ -95,11 +97,17 @@ func InitFirstMenuMdFile(browserHwnd win.HWND, firstMenuInfo MenuInfo, page *rod
 		if err != nil {
 			return
 		}
-		// 插入内容
-		mdFilePath := dir + "_index.md"
-		err = InsertDetailPageData(browserHwnd, mdFilePath, firstMenuInfo, page)
-		if err != nil {
-			return
+		var result1 *proto.RuntimeRemoteObject
+		result1, err = page.Eval(phpdJs.GetLayoutContentJs)
+		if result1.Value.String() == "" {
+			lg.InfoToFileAndStdOut(fmt.Sprintf("%s执行phpdJs.GetLayoutContentJs后，页面内容为空", firstMenuInfo.Url))
+		} else {
+			// 插入内容
+			mdFilePath := filepath.Join(dir, "_index.md")
+			err = InsertDetailPageData(browserHwnd, mdFilePath, firstMenuInfo, page)
+			if err != nil {
+				return
+			}
 		}
 	} else {
 		useUnderlineIndexMd = true
@@ -109,16 +117,26 @@ func InitFirstMenuMdFile(browserHwnd win.HWND, firstMenuInfo MenuInfo, page *rod
 		if err != nil {
 			return
 		}
-		// 插入内容
-		mdFilePath := dir + "_index.md"
-		err = InsertDetailPageData(browserHwnd, mdFilePath, firstMenuInfo, page)
-		if err != nil {
-			return
+
+		var result1 *proto.RuntimeRemoteObject
+		result1, err = page.Eval(phpdJs.GetLayoutContentJs)
+		vStr := strings.TrimSpace(result1.Value.String())
+		//lg.InfoToFileAndStdOut(fmt.Sprintf("%v -> %s", vStr, firstMenuInfo.Url))
+		if vStr == "" {
+			lg.InfoToFileAndStdOut(fmt.Sprintf("%s执行phpdJs.GetLayoutContentJs后，页面内容为空", firstMenuInfo.Url))
+		} else {
+			// 插入内容
+			mdFilePath := filepath.Join(dir, "_index.md")
+			err = InsertDetailPageData(browserHwnd, mdFilePath, firstMenuInfo, page)
+			if err != nil {
+				return
+			}
 		}
 	}
 
 	if len(subMenuInfos) > 0 {
-		err = DealSubMenuInfo(browserHwnd, subMenuInfos, curDir, page)
+		culMenuLevel := 2
+		err = DealSubMenuInfo(browserHwnd, subMenuInfos, curDir, culMenuLevel, page)
 		if err != nil {
 			return
 		}
@@ -126,13 +144,16 @@ func InitFirstMenuMdFile(browserHwnd win.HWND, firstMenuInfo MenuInfo, page *rod
 	return
 }
 
-func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir string, page *rod.Page) (err error) {
+func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir string, menuLevel int, page *rod.Page) (err error) {
 	if len(subMenuInfos) > 0 {
 		var subSubMenuInfos []MenuInfo
 		useUnderlineIndexMd := false
 		var dir, subCurDir string
-		for _, subMenuInfo := range subMenuInfos {
+		subMenuInfosLen := len(subMenuInfos)
+		for i, subMenuInfo := range subMenuInfos {
 			subSubMenuInfos = []MenuInfo{}
+			lg.InfoToFileAndStdOut(fmt.Sprintf("正在处理第%d层(当前层还有%d个菜单待处理) %s - %s", 1, subMenuInfosLen-i-1, subMenuInfo.MenuName, subMenuInfo.Url))
+
 			// 判断是否还有二级菜单
 			page.MustNavigate(subMenuInfo.Url)
 			page.MustWaitLoad()
@@ -163,11 +184,19 @@ func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir strin
 				if err != nil {
 					return
 				}
-				// 插入内容
-				mdFilePath := dir + "_index.md"
-				err = InsertDetailPageData(browserHwnd, mdFilePath, subMenuInfo, page)
-				if err != nil {
-					return
+				var result1 *proto.RuntimeRemoteObject
+				result1, err = page.Eval(phpdJs.GetLayoutContentJs)
+				vStr := strings.TrimSpace(result1.Value.String())
+				//lg.InfoToFileAndStdOut(fmt.Sprintf("%v -> %s", vStr, subMenuInfo.Url))
+				if vStr == "" {
+					lg.InfoToFileAndStdOut(fmt.Sprintf("%s执行phpdJs.GetLayoutContentJs后，页面内容为空", subMenuInfo.Url))
+				} else {
+					// 插入内容
+					mdFilePath := filepath.Join(dir, "_index.md")
+					err = InsertDetailPageData(browserHwnd, mdFilePath, subMenuInfo, page)
+					if err != nil {
+						return
+					}
 				}
 			} else {
 				useUnderlineIndexMd = false
@@ -177,11 +206,20 @@ func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir strin
 				if err != nil {
 					return
 				}
-				// 插入内容
-				mdFilePath := dir + subMenuInfo.Filename + ".md"
-				err = InsertDetailPageData(browserHwnd, mdFilePath, subMenuInfo, page)
-				if err != nil {
-					return
+
+				var result1 *proto.RuntimeRemoteObject
+				result1, err = page.Eval(phpdJs.GetLayoutContentJs)
+				vStr := strings.TrimSpace(result1.Value.String())
+				//lg.InfoToFileAndStdOut(fmt.Sprintf("%v -> %s", vStr, subMenuInfo.Url))
+				if vStr == "" {
+					lg.InfoToFileAndStdOut(fmt.Sprintf("%s执行phpdJs.GetLayoutContentJs后，页面内容为空", subMenuInfo.Url))
+				} else {
+					// 插入内容
+					mdFilePath := filepath.Join(dir, subMenuInfo.Filename+".md")
+					err = InsertDetailPageData(browserHwnd, mdFilePath, subMenuInfo, page)
+					if err != nil {
+						return
+					}
 				}
 			}
 
@@ -190,7 +228,8 @@ func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir strin
 			}
 
 			if len(subSubMenuInfos) > 0 {
-				err = DealSubMenuInfo(browserHwnd, subSubMenuInfos, subCurDir, page)
+				curMenuLevel := menuLevel + 1
+				err = DealSubMenuInfo(browserHwnd, subSubMenuInfos, subCurDir, curMenuLevel, page)
 				if err != nil {
 					return
 				}
@@ -259,6 +298,10 @@ func dealUniqueMd(browserHwnd win.HWND, curUrl, step string) (err error) {
 	robotgo.CloseWindow()
 	time.Sleep(time.Duration(cfg.Default.WaitTyporaCloseSeconds) * time.Second)
 
+	_, err = phpdTr.ReplaceMarkdownFileContent(uniqueMdFilepath)
+	if err != nil {
+		return fmt.Errorf("在处理%s=%s时，替换出现错误：%v", step, curUrl, err)
+	}
 	return nil
 }
 

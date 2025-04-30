@@ -185,7 +185,8 @@ function replacePContent() {
         for (let j = 0; j < p.childNodes.length; j++) {
             const node = p.childNodes[j];
             if (node.nodeType === Node.TEXT_NODE) {
-                node.nodeValue = node.nodeValue.replace(/(_[_a-zA-Z:\(\)\?\$]+)/g, '`$1`');
+                node.nodeValue = node.nodeValue.replace(/(__[_a-zA-Z:\(\)\?\$]+)/g, '`$1`');
+                // node.nodeValue = node.nodeValue.replace(/(\$_[_a-zA-Z:\(\)\?\$]+)/g, '`$1`');
                 // node.nodeValue = node.nodeValue.replace(/(__construct\(\))/g, '`$1`');
             }
         }
@@ -215,7 +216,9 @@ function replaceP() {
 
 function replaceVar() {
     document.querySelectorAll("var").forEach(v => {
-        v.innerHTML = "\u0060" + v.innerHTML + "\u0060";
+        if (v.firstElementChild.tagName !== "A") {
+            v.innerHTML = "\u0060" + v.innerHTML + "\u0060";
+        }
     })
 }
 
