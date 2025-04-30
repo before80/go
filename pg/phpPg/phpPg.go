@@ -36,7 +36,7 @@ func init() {
 		panic(fmt.Sprintf("无法创建%s目录：%v\n", filepath.Join(contants.DidFolderName, "php"), err))
 	}
 
-	didF, err = os.OpenFile(filepath.Join(contants.DidFolderName, "php", "php.net.txt"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	didF, err = os.OpenFile(filepath.Join(contants.DidFolderName, "php", "php.net.txt"), os.O_APPEND|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		lg.ErrorToFile(fmt.Sprintf("无法创建或打开文件%q: %v\n", "php.net.txt", err))
 		panic(err)
@@ -45,11 +45,13 @@ func init() {
 	scanner := bufio.NewScanner(didF)
 	for scanner.Scan() {
 		line := scanner.Text() // 获取当前行的文本
+		//fmt.Println("line=", line)
 		if strings.TrimSpace(line) != "" {
 			didUrl = append(didUrl, line)
 		}
 	}
-	_, _ = didF.Seek(2, 0)
+	//fmt.Println("didUrl=", didUrl)
+	//_, _ = didF.Seek(2, 0)
 	res.NewRes(bufio.NewWriter(didF))
 }
 
@@ -236,7 +238,7 @@ func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir strin
 			}
 
 			if len(subSubMenuInfos) > 0 {
-				if !slices.Contains(didUrl, subMenuInfo.Url) {
+				if slices.Contains(didUrl, subMenuInfo.Url) {
 					lg.InfoToFileAndStdOut(fmt.Sprintf("%s 之前已处理过 - %s\n", subMenuInfo.MenuName, subMenuInfo.Url))
 				} else {
 					useUnderlineIndexMd = true
@@ -269,7 +271,7 @@ func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir strin
 					}
 				}
 			} else {
-				if !slices.Contains(didUrl, subMenuInfo.Url) {
+				if slices.Contains(didUrl, subMenuInfo.Url) {
 					lg.InfoToFileAndStdOut(fmt.Sprintf("%s 之前已处理过 - %s\n", subMenuInfo.MenuName, subMenuInfo.Url))
 				} else {
 					useUnderlineIndexMd = false
