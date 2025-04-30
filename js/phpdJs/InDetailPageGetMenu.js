@@ -1,7 +1,7 @@
 () => {
     let menuInfos = []
     const h1 = document.querySelector('h1')
-    if (h1.parentElement) {
+    if (h1) {
         const lis = h1.parentElement.querySelectorAll(":scope > ul.chunklist > li")
         if (lis.length > 0) {
             lis.forEach((li, i) => {
