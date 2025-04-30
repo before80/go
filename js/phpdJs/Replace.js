@@ -1,6 +1,6 @@
 function removeSomething() {
     const nav = document.querySelector("nav.navbar.navbar-fixed-top")
-    if (nav){
+    if (nav) {
         nav.remove()
     }
 
@@ -51,8 +51,13 @@ function removeSomething() {
 
     const h1 = document.querySelector("h1")
     if (h1) {
+        const chunklist = h1.parentElement.querySelector("ul.chunklist")
+        if (chunklist) {
+            chunklist.remove()
+        }
         h1.remove()
     }
+
 
     const h2s = document.querySelectorAll("h2")
     if (h2s.length > 0) {
@@ -63,15 +68,42 @@ function removeSomething() {
         })
     }
 
-    const chunklistChapter = document.querySelector("ul.chunklist.chunklist_chapter")
-    if (chunklistChapter) {
-        chunklistChapter.remove()
-    }
 
     const btns = document.querySelectorAll("button")
     if (btns.length > 0) {
         btns.forEach(btn => {
             btn.remove()
+        })
+    }
+    const layout = document.querySelector("#layout")
+    if (layout) {
+        if(layout.textContent.trim() === "") {
+            console.log("无内容")
+            // layout.insertAdjacentText("afterbegin","无内容")
+        }
+    }
+}
+
+
+function convertCodeToHtml(code, lang) {
+    // 将 \t 替换为四个空格
+    let converted = code.replace(/\t/g, '&nbsp;&nbsp;&nbsp;&nbsp;');
+    // 将 \n 替换为 <br> 标签
+    converted = converted.replace(/\n\)$/, '<br><br>)');
+    converted = converted.replace(/\n\}$/, '<br><br>}');
+    converted = converted.replace(/\n/g, '<br>');
+    // 使用 <pre> 和 <code> 标签包裹代码，并添加语言类名
+    const html = `<div><pre><code class="text-sm text-gray-800 bg-gray-200 p-4 rounded-md language-${lang}">${converted}</code></pre></div>`;
+    return html;
+}
+
+function replaceDivClassSynopsis() {
+    const divs = document.querySelectorAll("div.classsynopsis")
+    if (divs.length > 0) {
+        divs.forEach(div => {
+            const html = convertCodeToHtml(div.textContent.trim(),"php")
+            div.insertAdjacentHTML("afterend",html)
+            div.remove()
         })
     }
 }
@@ -132,15 +164,31 @@ function replaceCData() {
     }
 }
 
-function replaceTip() {
-    const tips = document.querySelectorAll("div.tip")
-    if (tips.length > 0) {
-        tips.forEach(tip => {
+function addBlockquote() {
+    const divs = document.querySelectorAll("div.tip,div.warning")
+    if (divs.length > 0) {
+        divs.forEach(div => {
             const blockquote = document.createElement('blockquote')
-            blockquote.insertAdjacentHTML("afterbegin", tip.innerHTML)
-            tip.insertAdjacentElement("afterend", blockquote)
-            tip.remove()
+            const newDiv = document.createElement('div')
+            newDiv.insertAdjacentHTML("afterbegin", div.innerHTML)
+            blockquote.appendChild(newDiv)
+            div.insertAdjacentElement("afterend", blockquote)
+            div.remove()
         })
+    }
+}
+
+function replacePContent() {
+    const pTags = document.getElementsByTagName('p');
+    for (let i = 0; i < pTags.length; i++) {
+        const p = pTags[i];
+        for (let j = 0; j < p.childNodes.length; j++) {
+            const node = p.childNodes[j];
+            if (node.nodeType === Node.TEXT_NODE) {
+                node.nodeValue = node.nodeValue.replace(/(_[_a-zA-Z:\(\)\?\$]+)/g, '`$1`');
+                // node.nodeValue = node.nodeValue.replace(/(__construct\(\))/g, '`$1`');
+            }
+        }
     }
 }
 
@@ -188,12 +236,13 @@ function addHeaderAnchorAndRemoveGenanchor() {
 }
 
 
-
 removeSomething();
+replaceDivClassSynopsis();
 replaceShellCode();
 replaceHtmlCode();
 replacePHPCode();
-replaceTip();
+addBlockquote();
+replacePContent();
 replaceP();
 replaceVar();
 addHeaderAnchorAndRemoveGenanchor();
