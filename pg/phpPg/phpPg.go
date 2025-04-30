@@ -152,7 +152,7 @@ func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir strin
 		subMenuInfosLen := len(subMenuInfos)
 		for i, subMenuInfo := range subMenuInfos {
 			subSubMenuInfos = []MenuInfo{}
-			lg.InfoToFileAndStdOut(fmt.Sprintf("正在处理第%d层(当前层还有%d个菜单待处理) %s - %s", 1, subMenuInfosLen-i-1, subMenuInfo.MenuName, subMenuInfo.Url))
+			lg.InfoToFileAndStdOut(fmt.Sprintf("正在处理第%d层(当前层还有%d个菜单待处理) %s - %s\n", menuLevel, subMenuInfosLen-i-1, subMenuInfo.MenuName, subMenuInfo.Url))
 
 			// 判断是否还有二级菜单
 			page.MustNavigate(subMenuInfo.Url)

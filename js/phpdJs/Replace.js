@@ -216,7 +216,7 @@ function replaceP() {
 
 function replaceVar() {
     document.querySelectorAll("var").forEach(v => {
-        if (v.firstElementChild.tagName !== "A") {
+        if (!v.querySelector("a")) {
             v.innerHTML = "\u0060" + v.innerHTML + "\u0060";
         }
     })
