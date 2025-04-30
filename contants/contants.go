@@ -6,6 +6,7 @@ const (
 	LogFolderName                = "logs"
 	ConfigFolderName             = "config"
 	OutputFolderName             = "output"
+	DidFolderName                = "did"
 
 	// log 目录下的文件
 	LogFileNamePrefix = "app_log"

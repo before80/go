@@ -1,6 +1,7 @@
 package phpPg
 
 import (
+	"bufio"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,6 +10,7 @@ import (
 	"github.com/before80/go/js/phpdJs"
 	"github.com/before80/go/lg"
 	"github.com/before80/go/pg"
+	"github.com/before80/go/res"
 	"github.com/before80/go/tr"
 	"github.com/before80/go/tr/phpdTr"
 	"github.com/before80/go/wind"
@@ -19,9 +21,43 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"time"
 )
+
+var didF *os.File
+var didUrl []string
+
+func init() {
+	var err error
+	err = os.MkdirAll(filepath.Join(contants.DidFolderName, "php"), 0777)
+	if err != nil {
+		panic(fmt.Sprintf("无法创建%s目录：%v\n", filepath.Join(contants.DidFolderName, "php"), err))
+	}
+
+	didF, err = os.OpenFile(filepath.Join(contants.DidFolderName, "php", "php.net.txt"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	if err != nil {
+		lg.ErrorToFile(fmt.Sprintf("无法创建或打开文件%q: %v\n", "php.net.txt", err))
+		panic(err)
+	}
+
+	scanner := bufio.NewScanner(didF)
+	for scanner.Scan() {
+		line := scanner.Text() // 获取当前行的文本
+		if strings.TrimSpace(line) != "" {
+			didUrl = append(didUrl, line)
+		}
+	}
+	_, _ = didF.Seek(2, 0)
+	res.NewRes(bufio.NewWriter(didF))
+}
+
+func CloseInitFiles() {
+	if didF != nil {
+		_ = didF.Close()
+	}
+}
 
 type MenuInfo struct {
 	MenuName string `json:"menu_name"`
@@ -90,46 +126,69 @@ func InitFirstMenuMdFile(browserHwnd win.HWND, firstMenuInfo MenuInfo, page *rod
 	}
 
 	if len(subMenuInfos) > 0 {
-		useUnderlineIndexMd = true
-		dir = filepath.Join(contants.OutputFolderName, prefixDirname+firstMenuInfo.Filename)
-		curDir = dir
-		err = preInitMdFile(firstMenuInfo.Index, true, useUnderlineIndexMd, dir, firstMenuInfo)
-		if err != nil {
-			return
-		}
-		var result1 *proto.RuntimeRemoteObject
-		result1, err = page.Eval(phpdJs.GetLayoutContentJs)
-		if result1.Value.String() == "" {
-			lg.InfoToFileAndStdOut(fmt.Sprintf("%s执行phpdJs.GetLayoutContentJs后，页面内容为空", firstMenuInfo.Url))
+		if slices.Contains(didUrl, firstMenuInfo.Url) {
+			lg.InfoToFileAndStdOut(fmt.Sprintf("%s 之前已处理过 - %s\n", firstMenuInfo.MenuName, firstMenuInfo.Url))
 		} else {
-			// 插入内容
-			mdFilePath := filepath.Join(dir, "_index.md")
-			err = InsertDetailPageData(browserHwnd, mdFilePath, firstMenuInfo, page)
+			useUnderlineIndexMd = true
+			dir = filepath.Join(contants.OutputFolderName, prefixDirname+firstMenuInfo.Filename)
+			curDir = dir
+			err = preInitMdFile(firstMenuInfo.Index, true, useUnderlineIndexMd, dir, firstMenuInfo)
 			if err != nil {
 				return
 			}
+
+			_, err = page.Eval(fmt.Sprintf(`() => { %s }`, phpdJs.ReplaceJs))
+			if err != nil {
+				return fmt.Errorf("在网页%s中执行phpdJs.ReplaceJs遇到错误：%v", firstMenuInfo.Url, err)
+			}
+
+			var result1 *proto.RuntimeRemoteObject
+			result1, err = page.Eval(phpdJs.GetLayoutContentJs)
+			if result1.Value.String() == "" {
+				lg.InfoToFileAndStdOut(fmt.Sprintf("%s执行phpdJs.GetLayoutContentJs后，页面内容为空", firstMenuInfo.Url))
+			} else {
+				// 插入内容
+				mdFilePath := filepath.Join(dir, "_index.md")
+				err = InsertDetailPageData(browserHwnd, mdFilePath, firstMenuInfo)
+				if err != nil {
+					return
+				}
+				// 记录已经处理的url
+				res.R.WriteStringAndFlush(fmt.Sprintf("%s\n", firstMenuInfo.Url))
+			}
 		}
 	} else {
-		useUnderlineIndexMd = true
-		dir = filepath.Join(contants.OutputFolderName, prefixDirname+firstMenuInfo.Filename)
-		curDir = dir
-		err = preInitMdFile(firstMenuInfo.Index, true, useUnderlineIndexMd, dir, firstMenuInfo)
-		if err != nil {
-			return
-		}
-
-		var result1 *proto.RuntimeRemoteObject
-		result1, err = page.Eval(phpdJs.GetLayoutContentJs)
-		vStr := strings.TrimSpace(result1.Value.String())
-		//lg.InfoToFileAndStdOut(fmt.Sprintf("%v -> %s", vStr, firstMenuInfo.Url))
-		if vStr == "" {
-			lg.InfoToFileAndStdOut(fmt.Sprintf("%s执行phpdJs.GetLayoutContentJs后，页面内容为空", firstMenuInfo.Url))
+		if slices.Contains(didUrl, firstMenuInfo.Url) {
+			lg.InfoToFileAndStdOut(fmt.Sprintf("%s 之前已处理过 - %s\n", firstMenuInfo.MenuName, firstMenuInfo.Url))
 		} else {
-			// 插入内容
-			mdFilePath := filepath.Join(dir, "_index.md")
-			err = InsertDetailPageData(browserHwnd, mdFilePath, firstMenuInfo, page)
+			useUnderlineIndexMd = true
+			dir = filepath.Join(contants.OutputFolderName, prefixDirname+firstMenuInfo.Filename)
+			curDir = dir
+			err = preInitMdFile(firstMenuInfo.Index, true, useUnderlineIndexMd, dir, firstMenuInfo)
 			if err != nil {
 				return
+			}
+
+			_, err = page.Eval(fmt.Sprintf(`() => { %s }`, phpdJs.ReplaceJs))
+			if err != nil {
+				return fmt.Errorf("在网页%s中执行phpdJs.ReplaceJs遇到错误：%v", firstMenuInfo.Url, err)
+			}
+
+			var result1 *proto.RuntimeRemoteObject
+			result1, err = page.Eval(phpdJs.GetLayoutContentJs)
+			vStr := strings.TrimSpace(result1.Value.String())
+			//lg.InfoToFileAndStdOut(fmt.Sprintf("%v -> %s", vStr, firstMenuInfo.Url))
+			if vStr == "" {
+				lg.InfoToFileAndStdOut(fmt.Sprintf("%s执行phpdJs.GetLayoutContentJs后，页面内容为空", firstMenuInfo.Url))
+			} else {
+				// 插入内容
+				mdFilePath := filepath.Join(dir, "_index.md")
+				err = InsertDetailPageData(browserHwnd, mdFilePath, firstMenuInfo)
+				if err != nil {
+					return
+				}
+				// 记录已经处理的url
+				res.R.WriteStringAndFlush(fmt.Sprintf("%s\n", firstMenuInfo.Url))
 			}
 		}
 	}
@@ -177,48 +236,70 @@ func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir strin
 			}
 
 			if len(subSubMenuInfos) > 0 {
-				useUnderlineIndexMd = true
-				dir = filepath.Join(curDir, subMenuInfo.Filename)
-				subCurDir = dir
-				err = preInitMdFile(subMenuInfo.Index, false, useUnderlineIndexMd, dir, subMenuInfo)
-				if err != nil {
-					return
-				}
-				var result1 *proto.RuntimeRemoteObject
-				result1, err = page.Eval(phpdJs.GetLayoutContentJs)
-				vStr := strings.TrimSpace(result1.Value.String())
-				//lg.InfoToFileAndStdOut(fmt.Sprintf("%v -> %s", vStr, subMenuInfo.Url))
-				if vStr == "" {
-					lg.InfoToFileAndStdOut(fmt.Sprintf("%s执行phpdJs.GetLayoutContentJs后，页面内容为空", subMenuInfo.Url))
+				if !slices.Contains(didUrl, subMenuInfo.Url) {
+					lg.InfoToFileAndStdOut(fmt.Sprintf("%s 之前已处理过 - %s\n", subMenuInfo.MenuName, subMenuInfo.Url))
 				} else {
-					// 插入内容
-					mdFilePath := filepath.Join(dir, "_index.md")
-					err = InsertDetailPageData(browserHwnd, mdFilePath, subMenuInfo, page)
+					useUnderlineIndexMd = true
+					dir = filepath.Join(curDir, subMenuInfo.Filename)
+					subCurDir = dir
+					err = preInitMdFile(subMenuInfo.Index, false, useUnderlineIndexMd, dir, subMenuInfo)
 					if err != nil {
 						return
 					}
+					_, err = page.Eval(fmt.Sprintf(`() => { %s }`, phpdJs.ReplaceJs))
+					if err != nil {
+						return fmt.Errorf("在网页%s中执行phpdJs.ReplaceJs遇到错误：%v", subMenuInfo.Url, err)
+					}
+
+					var result1 *proto.RuntimeRemoteObject
+					result1, err = page.Eval(phpdJs.GetLayoutContentJs)
+					vStr := strings.TrimSpace(result1.Value.String())
+					//lg.InfoToFileAndStdOut(fmt.Sprintf("%v -> %s", vStr, subMenuInfo.Url))
+					if vStr == "" {
+						lg.InfoToFileAndStdOut(fmt.Sprintf("%s执行phpdJs.GetLayoutContentJs后，页面内容为空", subMenuInfo.Url))
+					} else {
+						// 插入内容
+						mdFilePath := filepath.Join(dir, "_index.md")
+						err = InsertDetailPageData(browserHwnd, mdFilePath, subMenuInfo)
+						if err != nil {
+							return
+						}
+						// 记录已经处理的url
+						res.R.WriteStringAndFlush(fmt.Sprintf("%s\n", subMenuInfo.Url))
+					}
 				}
 			} else {
-				useUnderlineIndexMd = false
-				dir = curDir
-				subCurDir = dir
-				err = preInitMdFile(subMenuInfo.Index, false, useUnderlineIndexMd, dir, subMenuInfo)
-				if err != nil {
-					return
-				}
-
-				var result1 *proto.RuntimeRemoteObject
-				result1, err = page.Eval(phpdJs.GetLayoutContentJs)
-				vStr := strings.TrimSpace(result1.Value.String())
-				//lg.InfoToFileAndStdOut(fmt.Sprintf("%v -> %s", vStr, subMenuInfo.Url))
-				if vStr == "" {
-					lg.InfoToFileAndStdOut(fmt.Sprintf("%s执行phpdJs.GetLayoutContentJs后，页面内容为空", subMenuInfo.Url))
+				if !slices.Contains(didUrl, subMenuInfo.Url) {
+					lg.InfoToFileAndStdOut(fmt.Sprintf("%s 之前已处理过 - %s\n", subMenuInfo.MenuName, subMenuInfo.Url))
 				} else {
-					// 插入内容
-					mdFilePath := filepath.Join(dir, subMenuInfo.Filename+".md")
-					err = InsertDetailPageData(browserHwnd, mdFilePath, subMenuInfo, page)
+					useUnderlineIndexMd = false
+					dir = curDir
+					subCurDir = dir
+					err = preInitMdFile(subMenuInfo.Index, false, useUnderlineIndexMd, dir, subMenuInfo)
 					if err != nil {
 						return
+					}
+
+					_, err = page.Eval(fmt.Sprintf(`() => { %s }`, phpdJs.ReplaceJs))
+					if err != nil {
+						return fmt.Errorf("在网页%s中执行phpdJs.ReplaceJs遇到错误：%v", subMenuInfo.Url, err)
+					}
+
+					var result1 *proto.RuntimeRemoteObject
+					result1, err = page.Eval(phpdJs.GetLayoutContentJs)
+					vStr := strings.TrimSpace(result1.Value.String())
+					//lg.InfoToFileAndStdOut(fmt.Sprintf("%v -> %s", vStr, subMenuInfo.Url))
+					if vStr == "" {
+						lg.InfoToFileAndStdOut(fmt.Sprintf("%s执行phpdJs.GetLayoutContentJs后，页面内容为空", subMenuInfo.Url))
+					} else {
+						// 插入内容
+						mdFilePath := filepath.Join(dir, subMenuInfo.Filename+".md")
+						err = InsertDetailPageData(browserHwnd, mdFilePath, subMenuInfo)
+						if err != nil {
+							return
+						}
+						// 记录已经处理的url
+						res.R.WriteStringAndFlush(fmt.Sprintf("%s\n", subMenuInfo.Url))
 					}
 				}
 			}
@@ -239,17 +320,12 @@ func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir strin
 	return
 }
 
-func InsertDetailPageData(browserHwnd win.HWND, mdFilePath string, menuInfo MenuInfo, page *rod.Page) (err error) {
+func InsertDetailPageData(browserHwnd win.HWND, mdFilePath string, menuInfo MenuInfo) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("插入detailPage=%s数据时遇到错误：%v", menuInfo.Url, r)
 		}
 	}()
-
-	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, phpdJs.ReplaceJs))
-	if err != nil {
-		return fmt.Errorf("在网页%s中执行phpdJs.ReplaceJs遇到错误：%v", menuInfo.Url, err)
-	}
 
 	err = dealUniqueMd(browserHwnd, menuInfo.Url, "detailPage")
 	if err != nil {

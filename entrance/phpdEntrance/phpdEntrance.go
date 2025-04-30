@@ -9,10 +9,12 @@ import (
 	"github.com/go-rod/rod/lib/defaults"
 	"github.com/go-vgo/robotgo"
 	"github.com/tailscale/win"
+	"slices"
 	"strconv"
 )
 
 func Do() {
+	defer phpPg.CloseInitFiles()
 	var err error
 	defer func() {
 		if err != nil {
@@ -31,10 +33,24 @@ func Do() {
 	page = browser.MustPage()
 	browserHwnd = robotgo.GetHWND()
 
+	//page.MustNavigate("https://www.php.net/manual/zh/language.control-structures.php")
+	//page.MustWaitLoad()
+	//page.Eval(fmt.Sprintf(`() => { %s }`, phpdJs.ReplaceJs))
+	//
+	//var result1 *proto.RuntimeRemoteObject
+	//result1, err = page.Eval(phpdJs.GetLayoutContentJs)
+	//fmt.Printf("%q\n", result1.Value)
+	//fmt.Printf("%q\n", result1.Value.String())
+	//time.Sleep(200 * time.Second)
+	//return
+
 	var firstMenuInfos []phpPg.MenuInfo
 	firstMenuInfos, err = phpPg.GetAllFirstMenuInfo(page, "https://www.php.net/manual/zh/index.php")
 	firstMenuInfosLen := len(firstMenuInfos)
 	for i, firstMenuInfo := range firstMenuInfos {
+		if slices.Contains([]string{"copyright", "getting-started", "install", "preface"}, firstMenuInfo.Filename) {
+			continue
+		}
 		lg.InfoToFileAndStdOut(fmt.Sprintf("正在处理第%d层(当前层还有%d个菜单待处理) %s - %s\n", 1, firstMenuInfosLen-i-1, firstMenuInfo.MenuName, firstMenuInfo.Url))
 		err = phpPg.InitFirstMenuMdFile(browserHwnd, firstMenuInfo, page)
 		if err != nil {
