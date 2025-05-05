@@ -10,10 +10,18 @@ type Res struct {
 	l *sync.RWMutex
 }
 
-var R *Res
+var PHP *Res
+var MySQL *Res
 
-func NewRes(b *bufio.Writer) {
-	R = &Res{
+func NewPHP(b *bufio.Writer) {
+	PHP = &Res{
+		b: b,
+		l: &sync.RWMutex{},
+	}
+}
+
+func NewMySQL(b *bufio.Writer) {
+	MySQL = &Res{
 		b: b,
 		l: &sync.RWMutex{},
 	}

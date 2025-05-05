@@ -45,7 +45,7 @@ func init() {
 	}
 	//fmt.Println("didUrl=", didUrl)
 	//_, _ = didF.Seek(2, 0)
-	res.NewRes(bufio.NewWriter(didF))
+	res.NewMySQL(bufio.NewWriter(didF))
 }
 
 func CloseInitFiles() {
@@ -129,8 +129,8 @@ func DealMenuMdFile(browserHwnd win.HWND, dirPrefix string, menuInfo MenuInfo, p
 	}
 
 	// 记录已经处理的url
-	res.R.WriteStringAndFlush(fmt.Sprintf("%s\n", menuInfo.Url))
-
+	res.MySQL.WriteStringAndFlush(fmt.Sprintf("%s\n", menuInfo.Url))
+	lg.InfoToFileAndStdOut(fmt.Sprintf("处理完毕 %s - %s\n", menuInfo.MenuName, menuInfo.Url))
 	return nil
 }
 

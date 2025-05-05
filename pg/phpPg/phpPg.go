@@ -49,7 +49,7 @@ func init() {
 	}
 	//fmt.Println("didUrl=", didUrl)
 	//_, _ = didF.Seek(2, 0)
-	res.NewRes(bufio.NewWriter(didF))
+	res.NewPHP(bufio.NewWriter(didF))
 }
 
 func CloseInitFiles() {
@@ -154,7 +154,7 @@ func InitFirstMenuMdFile(browserHwnd win.HWND, firstMenuInfo MenuInfo, page *rod
 					return
 				}
 				// 记录已经处理的url
-				res.R.WriteStringAndFlush(fmt.Sprintf("%s\n", firstMenuInfo.Url))
+				res.PHP.WriteStringAndFlush(fmt.Sprintf("%s\n", firstMenuInfo.Url))
 			}
 		}
 	} else {
@@ -189,7 +189,7 @@ func InitFirstMenuMdFile(browserHwnd win.HWND, firstMenuInfo MenuInfo, page *rod
 					return
 				}
 				// 记录已经处理的url
-				res.R.WriteStringAndFlush(fmt.Sprintf("%s\n", firstMenuInfo.Url))
+				res.PHP.WriteStringAndFlush(fmt.Sprintf("%s\n", firstMenuInfo.Url))
 			}
 		}
 	}
@@ -270,7 +270,7 @@ func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir strin
 							return
 						}
 						// 记录已经处理的url
-						res.R.WriteStringAndFlush(fmt.Sprintf("%s\n", subMenuInfo.Url))
+						res.PHP.WriteStringAndFlush(fmt.Sprintf("%s\n", subMenuInfo.Url))
 					}
 				}
 			} else {
@@ -305,7 +305,7 @@ func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir strin
 							return
 						}
 						// 记录已经处理的url
-						res.R.WriteStringAndFlush(fmt.Sprintf("%s\n", subMenuInfo.Url))
+						res.PHP.WriteStringAndFlush(fmt.Sprintf("%s\n", subMenuInfo.Url))
 					}
 				}
 			}
