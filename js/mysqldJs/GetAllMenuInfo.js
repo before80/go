@@ -1,4 +1,5 @@
 () => {
+    let menuInfos = []
     function getNestedLiData(ulElement) {
         const liData = [];
         const lis = ulElement.children;
@@ -11,7 +12,7 @@
                     const urls = url.split("/")
                     const filename = urls[urls.length - 1].replace(/\.html$/, "")
                     const data = {
-                        menu_name: a.textContent.trim(),
+                        menu_name: a.textContent.trim().replace(/[\"\'\/\\\$#@&\(\)]/g,''),
                         filename: filename,
                         url: url,
                         index: i + 1,
@@ -28,20 +29,20 @@
         return liData;
     }
 
-    function pushChildrenIData(menuInfos, chd, parentDirPath) {
+    function pushChildrenIData(chd, parentDirPath) {
         const iData = chd
         for (let i = 0; i < iData.length; i++) {
             const dv = iData[i]
-            let dirPath = dv.children && dv.children.length > 0 ? `${parentDirPath}/{dv.filename}` : parentDirPath
             menuInfos.push({
                 menu_name: dv.menu_name,
                 url: dv.url,
                 filename: dv.filename,
-                file_path: dv.children && dv.children.length > 0 ? `${dirPath}/${dv.filename}/_index.md` : `${dirPath}/${dv.filename}.md`,
+                file_path: dv.children && dv.children.length > 0 ? `${parentDirPath}/${dv.filename}/_index.md` : `${parentDirPath}/${dv.filename}.md`,
                 index: dv.index,
                 isTop: 2,
-                children: dv.children,
             })
+            let dirPath = dv.children && dv.children.length > 0 ? `${parentDirPath}/${dv.filename}` : parentDirPath
+
             if (dv.children && dv.children.length > 0) {
                 pushChildrenIData(dv.children, dirPath)
             }
@@ -52,7 +53,7 @@
         let tempMenuInfos = []
         tempMenuInfos = getNestedLiData(document.querySelector("#doc-201 > ul"))
 
-        let menuInfos = []
+
 
         if (tempMenuInfos.length > 0) {
             for (let i = 0; i < tempMenuInfos.length; i++) {
@@ -67,12 +68,12 @@
                     is_top: 1,
                 })
                 if (dv.children && dv.children.length > 0) {
-                    pushChildrenIData(menuInfos, dv.children, dirPath)
+                    pushChildrenIData(dv.children, dirPath)
                 }
             }
         }
-        return menuInfos
     }
-
-    return GetAllMenuInfo()
+    GetAllMenuInfo()
+    console.log(menuInfos)
+    return menuInfos
 }
