@@ -1,11 +1,11 @@
 # 等待打开下一个网页的秒数
 wait_open_next_page_seconds = 2
 # 等待typora打开窗口的秒数
-wait_typora_open_seconds = 2
+wait_typora_open_seconds = 3
 # 等待typora保存的秒数
 wait_typora_save_seconds = 2
 # 等待typora粘贴到保存之间的秒数
-wait_typora_copied_to_save_seconds = 4
+wait_typora_copied_to_save_seconds = 3
 # 等待typora关闭窗口的秒数
 wait_typora_close_seconds = 2
 # 唯一markdown文件路径

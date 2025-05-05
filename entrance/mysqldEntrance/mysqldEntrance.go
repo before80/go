@@ -35,13 +35,14 @@ func Do() {
 
 	var menuInfos []mysqldPg.MenuInfo
 	menuInfos, err = mysqldPg.GetAllMenuInfo(page, "https://dev.mysql.com/doc/refman/8.0/en/")
-	//menuInfosLen := len(menuInfos)
+	menuInfosLen := len(menuInfos)
 	fmt.Println("menuInfos=", menuInfos)
-	for _, menuInfo := range menuInfos {
+	for i, menuInfo := range menuInfos {
 		//if !slices.Contains([]string{""}, menuInfo.Filename) {
 		//	continue
 		//}
-		err = mysqldPg.DealMenuMdFile(browserHwnd, "mysql", menuInfo, page)
+		surplus := menuInfosLen - i - 1
+		err = mysqldPg.DealMenuMdFile(surplus, browserHwnd, "mysql", menuInfo, page)
 		if err != nil {
 			lg.ErrorToFileAndStdOutWithSleepSecond(fmt.Sprintf("%v\n", err), 3)
 			return

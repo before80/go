@@ -99,7 +99,7 @@ func GetAllMenuInfo(page *rod.Page, url string) (menuInfos []MenuInfo, err error
 	return
 }
 
-func DealMenuMdFile(browserHwnd win.HWND, dirPrefix string, menuInfo MenuInfo, page *rod.Page) (err error) {
+func DealMenuMdFile(surplus int, browserHwnd win.HWND, dirPrefix string, menuInfo MenuInfo, page *rod.Page) (err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("获取页面内容时遇到错误：%v", r)
@@ -109,7 +109,7 @@ func DealMenuMdFile(browserHwnd win.HWND, dirPrefix string, menuInfo MenuInfo, p
 		lg.InfoToFileAndStdOut(fmt.Sprintf("之前已处理 %s - %s\n", menuInfo.MenuName, menuInfo.Url))
 		return
 	}
-	lg.InfoToFileAndStdOut(fmt.Sprintf("正在处理 %s - %s\n", menuInfo.MenuName, menuInfo.Url))
+	lg.InfoToFileAndStdOut(fmt.Sprintf("还有%d 正在处理 %s - %s\n", surplus, menuInfo.MenuName, menuInfo.Url))
 
 	err = preInitMdFile(dirPrefix, menuInfo)
 	if err != nil {
