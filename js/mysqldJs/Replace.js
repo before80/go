@@ -54,9 +54,9 @@ function removeSomething() {
 }
 
 function replaceSomething() {
-    const tdSpanStrongs = document.querySelectorAll("td > span.bold > strong")
-    if (tdSpanStrongs.length > 0) {
-        tdSpanStrongs.forEach(st => {
+    const spanStrongs = document.querySelectorAll("span.bold > strong")
+    if (spanStrongs.length > 0) {
+        spanStrongs.forEach(st => {
             const span = st.parentElement
             const newSt = document.createElement("strong")
             newSt.innerHTML = st.innerHTML
