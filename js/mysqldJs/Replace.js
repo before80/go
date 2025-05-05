@@ -43,6 +43,14 @@ function removeSomething() {
     if (doc) {
         doc.remove()
     }
+
+    const indexterms = document.querySelectorAll("a.indexterm")
+    if (indexterms.length > 0) {
+        indexterms.forEach(it => {
+            it.remove()
+        })
+    }
+
 }
 
 function replaceSomething() {
@@ -56,7 +64,33 @@ function replaceSomething() {
             span.remove()
         })
     }
+
+    const literalLinks = document.querySelectorAll("code.literal > a.link")
+
+    if (literalLinks.length > 0) {
+        literalLinks.forEach(ll => {
+            const code = ll.parentElement
+            code.insertAdjacentElement("afterend", ll)
+            code.remove()
+        })
+    }
+}
+
+
+function addBlockquote() {
+    const divs = document.querySelectorAll("div.note,div.important,div.tip,div.warning")
+    if (divs.length > 0) {
+        divs.forEach(div => {
+            const blockquote = document.createElement('blockquote')
+            const newDiv = document.createElement('div')
+            newDiv.insertAdjacentHTML("afterbegin", div.innerHTML)
+            blockquote.appendChild(newDiv)
+            div.insertAdjacentElement("afterend", blockquote)
+            div.remove()
+        })
+    }
 }
 
 removeSomething();
 replaceSomething();
+addBlockquote()
