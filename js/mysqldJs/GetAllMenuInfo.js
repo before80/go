@@ -35,6 +35,7 @@
             let dirPath = dv.children && dv.children.length > 0 ? `${parentDirPath}/{dv.filename}` : parentDirPath
             menuInfos.push({
                 menu_name: dv.menu_name,
+                url: dv.url,
                 filename: dv.filename,
                 file_path: dv.children && dv.children.length > 0 ? `${dirPath}/${dv.filename}/_index.md` : `${dirPath}/${dv.filename}.md`,
                 index: dv.index,
@@ -59,6 +60,7 @@
                 let dirPath =  dv.filename
                 menuInfos.push({
                     menu_name: dv.menu_name,
+                    url: dv.url,
                     filename: dv.filename,
                     file_path: `${dirPath}/_index.md`,
                     index: dv.index,

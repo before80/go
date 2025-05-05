@@ -41,7 +41,7 @@ func Do() {
 		//if !slices.Contains([]string{""}, menuInfo.Filename) {
 		//	continue
 		//}
-		err = mysqldPg.DealMenuMdFile(browserHwnd, "mysql", menuInfo)
+		err = mysqldPg.DealMenuMdFile(browserHwnd, "mysql", menuInfo, page)
 		if err != nil {
 			lg.ErrorToFileAndStdOutWithSleepSecond(fmt.Sprintf("%v\n", err), 3)
 			return

@@ -55,13 +55,12 @@ func CloseInitFiles() {
 }
 
 type MenuInfo struct {
-	MenuName string     `json:"menu_name"`
-	Filename string     `json:"filename"`
-	FilePath string     `json:"file_path"`
-	Url      string     `json:"url"`
-	Index    int        `json:"index"`
-	IsTop    int        `json:"is_top"`
-	Children []MenuInfo `json:"children"`
+	MenuName string `json:"menu_name"`
+	Filename string `json:"filename"`
+	FilePath string `json:"file_path"`
+	Url      string `json:"url"`
+	Index    int    `json:"index"`
+	IsTop    int    `json:"is_top"`
 }
 
 func GetAllMenuInfo(page *rod.Page, url string) (menuInfos []MenuInfo, err error) {
@@ -101,6 +100,11 @@ func GetAllMenuInfo(page *rod.Page, url string) (menuInfos []MenuInfo, err error
 }
 
 func DealMenuMdFile(browserHwnd win.HWND, dirPrefix string, menuInfo MenuInfo, page *rod.Page) (err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			err = fmt.Errorf("获取页面内容时遇到错误：%v", r)
+		}
+	}()
 	if slices.Contains(didUrl, menuInfo.Url) {
 		lg.InfoToFileAndStdOut(fmt.Sprintf("之前已处理 %s - %s\n", menuInfo.MenuName, menuInfo.Url))
 		return
@@ -111,6 +115,8 @@ func DealMenuMdFile(browserHwnd win.HWND, dirPrefix string, menuInfo MenuInfo, p
 	if err != nil {
 		return
 	}
+	page.MustNavigate(menuInfo.Url)
+	page.MustWaitLoad()
 
 	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, mysqldJs.ReplaceJs))
 	if err != nil {
