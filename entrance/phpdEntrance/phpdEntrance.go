@@ -9,6 +9,7 @@ import (
 	"github.com/go-rod/rod/lib/defaults"
 	"github.com/go-vgo/robotgo"
 	"github.com/tailscale/win"
+	"slices"
 	"strconv"
 )
 
@@ -48,9 +49,12 @@ func Do() {
 	firstMenuInfosLen := len(firstMenuInfos)
 	fmt.Println("firstMenuInfos=", firstMenuInfos)
 	for i, firstMenuInfo := range firstMenuInfos {
-		//if slices.Contains([]string{"copyright", "getting-started", "install", "preface"}, firstMenuInfo.Filename) {
+		//if slices.Contains([]string{"copyright", "getting-started", "install", "preface", "features", "langref", "security", "funcref"}, firstMenuInfo.Filename) {
 		//	continue
 		//}
+		if !slices.Contains([]string{"funcref"}, firstMenuInfo.Filename) {
+			continue
+		}
 		lg.InfoToFileAndStdOut(fmt.Sprintf("正在处理第%d层(当前层还有%d个菜单待处理) %s - %s\n", 1, firstMenuInfosLen-i-1, firstMenuInfo.MenuName, firstMenuInfo.Url))
 		err = phpPg.InitFirstMenuMdFile(browserHwnd, firstMenuInfo, page)
 		if err != nil {

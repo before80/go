@@ -8,12 +8,9 @@ import (
 	"github.com/before80/go/contants"
 	"github.com/before80/go/js/pydJs"
 	"github.com/before80/go/pg"
-	"github.com/before80/go/tr"
 	"github.com/before80/go/tr/pydTr"
-	"github.com/before80/go/wind"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/proto"
-	"github.com/go-vgo/robotgo"
 	"github.com/tailscale/win"
 	"io/fs"
 	"os"
@@ -124,9 +121,14 @@ func InsertBarMenuPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, page *rod
 		return nil, fmt.Errorf("在网页%s中执行GetDetailPageDataJs遇到错误：%v", barMenuInfo.Url, err)
 	}
 
-	err = dealUniqueMd(browserHwnd, barMenuInfo.Url, "barmenu")
+	err = pg.DealUniqueMd(browserHwnd, barMenuInfo.Url, "barmenu")
 	if err != nil {
 		return nil, err
+	}
+
+	_, err = pydTr.ReplaceMarkdownFileContent(cfg.Default.UniqueMdFilepath)
+	if err != nil {
+		return nil, fmt.Errorf("在处理%s=%s时，替换出现错误：%v", "detailPage", barMenuInfo.Url, err)
 	}
 
 	indexMdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, "_index.md")
@@ -140,10 +142,15 @@ func InsertSecondMenuPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, second
 		return fmt.Errorf("在网页%s中执行GetDetailPageDataJs遇到错误：%v", secondMenuInfo.Url, err)
 	}
 
-	err = dealUniqueMd(browserHwnd, secondMenuInfo.Url, "second")
+	err = pg.DealUniqueMd(browserHwnd, secondMenuInfo.Url, "second")
 	if err != nil {
 		return err
 	}
+	_, err = pydTr.ReplaceMarkdownFileContent(cfg.Default.UniqueMdFilepath)
+	if err != nil {
+		return fmt.Errorf("在处理%s=%s时，替换出现错误：%v", "detailPage", secondMenuInfo.Url, err)
+	}
+
 	indexMdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, secondMenuInfo.Filename, "_index.md")
 	err = pg.InsertAnyPageData(indexMdFp)
 	return
@@ -155,9 +162,13 @@ func InsertThirdMenuPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, secondM
 		return fmt.Errorf("在网页%s中执行GetDetailPageDataJs遇到错误：%v", thirdMenuInfo.Url, err)
 	}
 
-	err = dealUniqueMd(browserHwnd, thirdMenuInfo.Url, "third")
+	err = pg.DealUniqueMd(browserHwnd, thirdMenuInfo.Url, "third")
 	if err != nil {
 		return err
+	}
+	_, err = pydTr.ReplaceMarkdownFileContent(cfg.Default.UniqueMdFilepath)
+	if err != nil {
+		return fmt.Errorf("在处理%s=%s时，替换出现错误：%v", "detailPage", thirdMenuInfo.Url, err)
 	}
 
 	indexMdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, secondMenuInfo.Filename, thirdMenuInfo.Filename, "_index.md")
@@ -179,10 +190,15 @@ func InsertSecondDetailPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, seco
 		return fmt.Errorf("在网页%s中执行GetDetailPageDataJs遇到错误：%v", secondMenuInfo.Url, err)
 	}
 
-	err = dealUniqueMd(browserHwnd, secondMenuInfo.Url, "secondDetailPage")
+	err = pg.DealUniqueMd(browserHwnd, secondMenuInfo.Url, "secondDetailPage")
 	if err != nil {
 		return err
 	}
+	_, err = pydTr.ReplaceMarkdownFileContent(cfg.Default.UniqueMdFilepath)
+	if err != nil {
+		return fmt.Errorf("在处理%s=%s时，替换出现错误：%v", "detailPage", secondMenuInfo.Url, err)
+	}
+
 	mdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, secondMenuInfo.Filename+".md")
 	err = pg.InsertAnyPageData(mdFp)
 	return
@@ -202,9 +218,14 @@ func InsertThirdDetailPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, secon
 		return fmt.Errorf("在网页%s中执行GetDetailPageDataJs遇到错误：%v", thirdMenuInfo.Url, err)
 	}
 
-	err = dealUniqueMd(browserHwnd, thirdMenuInfo.Url, "thirdDetailPage")
+	err = pg.DealUniqueMd(browserHwnd, thirdMenuInfo.Url, "thirdDetailPage")
 	if err != nil {
 		return err
+	}
+
+	_, err = pydTr.ReplaceMarkdownFileContent(cfg.Default.UniqueMdFilepath)
+	if err != nil {
+		return fmt.Errorf("在处理%s=%s时，替换出现错误：%v", "detailPage", thirdMenuInfo.Url, err)
 	}
 
 	mdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, secondMenuInfo.Filename, thirdMenuInfo.Filename+".md")
@@ -226,58 +247,18 @@ func InsertFourthDetailPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, seco
 		return fmt.Errorf("在网页%s中执行GetDetailPageDataJs遇到错误：%v", fourthMenuInfo.Url, err)
 	}
 
-	err = dealUniqueMd(browserHwnd, fourthMenuInfo.Url, "fourthDetailPage")
+	err = pg.DealUniqueMd(browserHwnd, fourthMenuInfo.Url, "fourthDetailPage")
 	if err != nil {
 		return err
+	}
+	_, err = pydTr.ReplaceMarkdownFileContent(cfg.Default.UniqueMdFilepath)
+	if err != nil {
+		return fmt.Errorf("在处理%s=%s时，替换出现错误：%v", "detailPage", fourthMenuInfo.Url, err)
 	}
 
 	mdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, secondMenuInfo.Filename, thirdMenuInfo.Filename, fourthMenuInfo.Filename+".md")
 	err = pg.InsertAnyPageData(mdFp)
 	return
-}
-
-// dealUniqueMd 处理唯一的md文件中的内容
-func dealUniqueMd(browserHwnd win.HWND, curUrl, step string) (err error) {
-	uniqueMdFilepath := cfg.Default.UniqueMdFilepath
-	// 获取文件名
-	spSlice := strings.Split(uniqueMdFilepath, "\\")
-	mdFilename := spSlice[len(spSlice)-1]
-
-	// 清空唯一共用的markdown文件的文件内容
-	err = tr.TruncFileContent(uniqueMdFilepath)
-	if err != nil {
-		return fmt.Errorf("在处理%s=%s时，清空%q文件内容出现错误：%v", step, curUrl, uniqueMdFilepath, err)
-	}
-
-	// 打开 唯一共用的markdown文件
-	err = wind.OpenTypora(uniqueMdFilepath)
-	if err != nil {
-		return fmt.Errorf("在处理%s=%s时，打开窗口名为%q时出现错误：%v", step, curUrl, uniqueMdFilepath, err)
-	}
-
-	// 适当延时保证能打开 typora
-	time.Sleep(time.Duration(cfg.Default.WaitTyporaOpenSeconds) * time.Second)
-
-	var typoraHwnd win.HWND
-	typoraWindowName := fmt.Sprintf("%s - Typora", mdFilename)
-	typoraHwnd, err = wind.FindWindowHwndByWindowTitle(typoraWindowName)
-	if err != nil {
-		return fmt.Errorf("在处理%s=%s时，找不到%q窗口：%v", step, curUrl, typoraWindowName, err)
-	}
-
-	wind.SelectAllAndCtrlC(browserHwnd)
-	wind.SelectAllAndDelete(typoraHwnd)
-	wind.CtrlV(typoraHwnd)
-	time.Sleep(time.Duration(cfg.Default.WaitTyporaCopiedToSaveSeconds) * time.Second)
-	wind.CtrlS(typoraHwnd)
-	time.Sleep(time.Duration(cfg.Default.WaitTyporaSaveSeconds) * time.Second)
-	robotgo.CloseWindow()
-	time.Sleep(time.Duration(cfg.Default.WaitTyporaCloseSeconds) * time.Second)
-	_, err = pydTr.ReplaceMarkdownFileContent(uniqueMdFilepath)
-	if err != nil {
-		return fmt.Errorf("在处理%s=%s时，替换出现错误：%v", step, curUrl, err)
-	}
-	return nil
 }
 
 // findShouLuStart 找到 “收录时间：”所在行

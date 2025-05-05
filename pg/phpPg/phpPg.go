@@ -11,12 +11,9 @@ import (
 	"github.com/before80/go/lg"
 	"github.com/before80/go/pg"
 	"github.com/before80/go/res"
-	"github.com/before80/go/tr"
 	"github.com/before80/go/tr/phpdTr"
-	"github.com/before80/go/wind"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/proto"
-	"github.com/go-vgo/robotgo"
 	"github.com/tailscale/win"
 	"io/fs"
 	"os"
@@ -130,6 +127,7 @@ func InitFirstMenuMdFile(browserHwnd win.HWND, firstMenuInfo MenuInfo, page *rod
 	if len(subMenuInfos) > 0 {
 		if slices.Contains(didUrl, firstMenuInfo.Url) {
 			lg.InfoToFileAndStdOut(fmt.Sprintf("%s 之前已处理过 - %s\n", firstMenuInfo.MenuName, firstMenuInfo.Url))
+			time.Sleep(2 * time.Second)
 		} else {
 			useUnderlineIndexMd = true
 			dir = filepath.Join(contants.OutputFolderName, prefixDirname+firstMenuInfo.Filename)
@@ -162,6 +160,7 @@ func InitFirstMenuMdFile(browserHwnd win.HWND, firstMenuInfo MenuInfo, page *rod
 	} else {
 		if slices.Contains(didUrl, firstMenuInfo.Url) {
 			lg.InfoToFileAndStdOut(fmt.Sprintf("%s 之前已处理过 - %s\n", firstMenuInfo.MenuName, firstMenuInfo.Url))
+			time.Sleep(2 * time.Second)
 		} else {
 			useUnderlineIndexMd = true
 			dir = filepath.Join(contants.OutputFolderName, prefixDirname+firstMenuInfo.Filename)
@@ -212,6 +211,9 @@ func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir strin
 		var dir, subCurDir string
 		subMenuInfosLen := len(subMenuInfos)
 		for i, subMenuInfo := range subMenuInfos {
+			if slices.Contains([]string{"refs_basic_php", "refs_compression", "refs_remote_auth", "refs_utilspec_audio", "refs_utilspec_cmdline", "refs_crypto"}, subMenuInfo.Filename) {
+				continue
+			}
 			subSubMenuInfos = []MenuInfo{}
 			lg.InfoToFileAndStdOut(fmt.Sprintf("正在处理第%d层(当前层还有%d个菜单待处理) %s - %s\n", menuLevel, subMenuInfosLen-i-1, subMenuInfo.MenuName, subMenuInfo.Url))
 
@@ -240,6 +242,7 @@ func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir strin
 			if len(subSubMenuInfos) > 0 {
 				if slices.Contains(didUrl, subMenuInfo.Url) {
 					lg.InfoToFileAndStdOut(fmt.Sprintf("%s 之前已处理过 - %s\n", subMenuInfo.MenuName, subMenuInfo.Url))
+					time.Sleep(2 * time.Second)
 				} else {
 					useUnderlineIndexMd = true
 					dir = filepath.Join(curDir, subMenuInfo.Filename)
@@ -273,6 +276,7 @@ func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir strin
 			} else {
 				if slices.Contains(didUrl, subMenuInfo.Url) {
 					lg.InfoToFileAndStdOut(fmt.Sprintf("%s 之前已处理过 - %s\n", subMenuInfo.MenuName, subMenuInfo.Url))
+					time.Sleep(2 * time.Second)
 				} else {
 					useUnderlineIndexMd = false
 					dir = curDir
@@ -328,59 +332,18 @@ func InsertDetailPageData(browserHwnd win.HWND, mdFilePath string, menuInfo Menu
 			err = fmt.Errorf("插入detailPage=%s数据时遇到错误：%v", menuInfo.Url, r)
 		}
 	}()
-
-	err = dealUniqueMd(browserHwnd, menuInfo.Url, "detailPage")
+	step := "detailPage"
+	err = pg.DealUniqueMd(browserHwnd, menuInfo.Url, step)
 	if err != nil {
 		return err
+	}
+	_, err = phpdTr.ReplaceMarkdownFileContent(cfg.Default.UniqueMdFilepath)
+	if err != nil {
+		return fmt.Errorf("在处理%s=%s时，替换出现错误：%v", step, menuInfo.Url, err)
 	}
 
 	err = pg.InsertAnyPageData(mdFilePath)
 	return
-}
-
-func dealUniqueMd(browserHwnd win.HWND, curUrl, step string) (err error) {
-	uniqueMdFilepath := cfg.Default.UniqueMdFilepath
-	// 获取文件名
-	spSlice := strings.Split(uniqueMdFilepath, "\\")
-	mdFilename := spSlice[len(spSlice)-1]
-
-	// 清空唯一共用的markdown文件的文件内容
-	err = tr.TruncFileContent(uniqueMdFilepath)
-	if err != nil {
-		return fmt.Errorf("在处理%s=%s时，清空%q文件内容出现错误：%v", step, curUrl, uniqueMdFilepath, err)
-	}
-
-	// 打开 唯一共用的markdown文件
-	err = wind.OpenTypora(uniqueMdFilepath)
-	if err != nil {
-		return fmt.Errorf("在处理%s=%s时，打开窗口名为%q时出现错误：%v", step, curUrl, uniqueMdFilepath, err)
-	}
-
-	// 适当延时保证能打开 typora
-	time.Sleep(time.Duration(cfg.Default.WaitTyporaOpenSeconds) * time.Second)
-
-	var typoraHwnd win.HWND
-	typoraWindowName := fmt.Sprintf("%s - Typora", mdFilename)
-	typoraHwnd, err = wind.FindWindowHwndByWindowTitle(typoraWindowName)
-	if err != nil {
-		return fmt.Errorf("在处理%s=%s时，找不到%q窗口：%v", step, curUrl, typoraWindowName, err)
-	}
-
-	wind.SelectAllAndCtrlC(browserHwnd)
-	time.Sleep(200 * time.Microsecond)
-	wind.SelectAllAndDelete(typoraHwnd)
-	wind.CtrlV(typoraHwnd)
-	time.Sleep(time.Duration(cfg.Default.WaitTyporaCopiedToSaveSeconds) * time.Second)
-	wind.CtrlS(typoraHwnd)
-	time.Sleep(time.Duration(cfg.Default.WaitTyporaSaveSeconds) * time.Second)
-	robotgo.CloseWindow()
-	time.Sleep(time.Duration(cfg.Default.WaitTyporaCloseSeconds) * time.Second)
-
-	_, err = phpdTr.ReplaceMarkdownFileContent(uniqueMdFilepath)
-	if err != nil {
-		return fmt.Errorf("在处理%s=%s时，替换出现错误：%v", step, curUrl, err)
-	}
-	return nil
 }
 
 func preInitMdFile(index int, isBar, useUnderlineIndexMd bool, dir string, menuInfo MenuInfo) (err error) {

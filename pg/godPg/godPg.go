@@ -4,20 +4,15 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/before80/go/cfg"
 	"github.com/before80/go/contants"
 	"github.com/before80/go/js/godJs"
 	"github.com/before80/go/pg"
-	"github.com/before80/go/tr"
-	"github.com/before80/go/wind"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/proto"
-	"github.com/go-vgo/robotgo"
 	"github.com/tailscale/win"
 	"io/fs"
 	"os"
 	"path/filepath"
-	"strings"
 	"time"
 )
 
@@ -88,14 +83,15 @@ func InsertPkgDetailPageData(browserHwnd win.HWND, pkgMenu MenuInfo, page *rod.P
 		}
 	}()
 
-	page.MustNavigate(pkgMenu.Url)
+	page.MustNavigate(pkgMenu.Url + "?GOOS=windows")
 	page.MustWaitLoad()
+
 	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, godJs.ReplaceJs))
 	if err != nil {
 		return fmt.Errorf("在网页%s中执行godJs.ReplaceJs遇到错误：%v", pkgMenu.Url, err)
 	}
 
-	err = dealUniqueMd(browserHwnd, pkgMenu.Url, "detailPage")
+	err = pg.DealUniqueMd(browserHwnd, pkgMenu.Url, "detailPage")
 	if err != nil {
 		return err
 	}
@@ -112,47 +108,6 @@ func InsertPkgDetailPageData(browserHwnd win.HWND, pkgMenu MenuInfo, page *rod.P
 	}
 	err = pg.InsertAnyPageData(mdFp)
 	return
-}
-
-func dealUniqueMd(browserHwnd win.HWND, curUrl, step string) (err error) {
-	uniqueMdFilepath := cfg.Default.UniqueMdFilepath
-	// 获取文件名
-	spSlice := strings.Split(uniqueMdFilepath, "\\")
-	mdFilename := spSlice[len(spSlice)-1]
-
-	// 清空唯一共用的markdown文件的文件内容
-	err = tr.TruncFileContent(uniqueMdFilepath)
-	if err != nil {
-		return fmt.Errorf("在处理%s=%s时，清空%q文件内容出现错误：%v", step, curUrl, uniqueMdFilepath, err)
-	}
-
-	// 打开 唯一共用的markdown文件
-	err = wind.OpenTypora(uniqueMdFilepath)
-	if err != nil {
-		return fmt.Errorf("在处理%s=%s时，打开窗口名为%q时出现错误：%v", step, curUrl, uniqueMdFilepath, err)
-	}
-
-	// 适当延时保证能打开 typora
-	time.Sleep(time.Duration(cfg.Default.WaitTyporaOpenSeconds) * time.Second)
-
-	var typoraHwnd win.HWND
-	typoraWindowName := fmt.Sprintf("%s - Typora", mdFilename)
-	typoraHwnd, err = wind.FindWindowHwndByWindowTitle(typoraWindowName)
-	if err != nil {
-		return fmt.Errorf("在处理%s=%s时，找不到%q窗口：%v", step, curUrl, typoraWindowName, err)
-	}
-
-	wind.SelectAllAndCtrlC(browserHwnd)
-	time.Sleep(200 * time.Microsecond)
-	wind.SelectAllAndDelete(typoraHwnd)
-	wind.CtrlV(typoraHwnd)
-	time.Sleep(time.Duration(cfg.Default.WaitTyporaCopiedToSaveSeconds) * time.Second)
-	wind.CtrlS(typoraHwnd)
-	time.Sleep(time.Duration(cfg.Default.WaitTyporaSaveSeconds) * time.Second)
-	robotgo.CloseWindow()
-	time.Sleep(time.Duration(cfg.Default.WaitTyporaCloseSeconds) * time.Second)
-
-	return nil
 }
 
 func preInitMdFile(index int, isBar, useUnderlineIndexMd bool, dir string, menuInfo MenuInfo) (err error) {
