@@ -74,6 +74,17 @@ function replaceSomething() {
             code.remove()
         })
     }
+
+    const emCodes = document.querySelectorAll("em.replaceable > code")
+
+    if (emCodes.length > 0) {
+        emCodes.forEach(ec => {
+            const em = ec.parentElement
+            em.insertAdjacentElement("afterend", ec)
+            em.remove()
+        })
+    }
+
 }
 
 
