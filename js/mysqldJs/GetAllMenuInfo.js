@@ -12,7 +12,7 @@
                     const urls = url.split("/")
                     const filename = urls[urls.length - 1].replace(/\.html$/, "")
                     const data = {
-                        menu_name: a.textContent.trim().replace(/[\"\'\/\\\$#@&\(\)]/g,''),
+                        menu_name: a.textContent.trim().replace(/[\"\'\/\\\$#@&\(\)]/g,'').replace(/\s+/g, " "),
                         filename: filename,
                         url: url,
                         index: i + 1,
