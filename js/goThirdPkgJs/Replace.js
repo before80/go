@@ -49,6 +49,13 @@ function removeGoMainAside() {
     }
 }
 
+function removeGoNavigationDrawer() {
+    const aside = document.querySelector("aside.go-NavigationDrawer")
+    if (aside) {
+        aside.remove()
+    }
+}
+
 function removeGoMainNav() {
     const nav = document.querySelector("nav.go-Main-nav")
     if (nav) {
@@ -88,6 +95,15 @@ function removeImg() {
             if (h.querySelector("img")) {
                 h.querySelector("img").remove()
             }
+        })
+    }
+}
+
+function removeNoFollowImg() {
+    const imgs = document.querySelectorAll(`a[rel="nofollow"] > img`)
+    if (imgs.length > 0) {
+        imgs.forEach(img => {
+            img.remove()
         })
     }
 }
@@ -329,12 +345,15 @@ function replaceDocumentationDeprecatedTag() {
     }
 }
 
+
+
 agreeCookie();
 expand();
 removeHeader();
 removeRenderedFor();
 removeFooter();
 removeGoMainAside();
+removeGoNavigationDrawer();
 removeGoMainNav();
 removeDocumentationIndex();
 removeDocumentationExamples();
@@ -342,6 +361,7 @@ openDeprecatedDetails();
 removeUnitFiles();
 removeUnitDirectories();
 removeImg();
+removeNoFollowImg();
 addHeaderAnchorAndRemoveHeaderLink();
 modifyInTypeFuncHeaderLevel();
 replaceDocumentationDeprecatedTag();

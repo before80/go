@@ -11,6 +11,7 @@ import (
 	"github.com/tailscale/win"
 	"io/fs"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -24,8 +25,44 @@ func JudgeFileExist(mdFilePath string) bool {
 	return true
 }
 
+// GenBarIndexMdFile 生成栏目菜单中的_index.md文件
+func GenBarIndexMdFile(dir, title string, weight int) (err error) {
+	err = os.MkdirAll(dir, 0777)
+	if err != nil {
+		return fmt.Errorf("无法创建%s目录：%v\n", dir, err)
+	}
+	mdFp := filepath.Join(dir, "_index.md")
+
+	_, err = os.Stat(mdFp)
+	if err != nil && errors.Is(err, fs.ErrNotExist) {
+		var mdF *os.File
+		mdF, err = os.OpenFile(mdFp, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+		if err != nil {
+			return fmt.Errorf("创建文件 %s 时出错: %w", mdFp, err)
+		}
+		defer mdF.Close()
+		date := time.Now().Format(time.RFC3339)
+		_, err = mdF.WriteString(fmt.Sprintf(`+++
+title = "%s"
+linkTitle = "%s"
+date = %s
+type = "docs"
+description = "%s"
+isCJKLanguage = true
+draft = false
+[menu.main]
+	weight = %d
++++
+
+`, title, title, date, "", weight))
+
+		return err
+	}
+	return nil
+}
+
 // InsertAnyPageData 插入页面数据
-func InsertAnyPageData(fpDst string) (err error) {
+func InsertAnyPageData(fpDst string, waitFindLineStr string) (err error) {
 	fpSrc := cfg.Default.UniqueMdFilepath
 	var dstFile, srcFile *os.File
 	dstFile, err = os.OpenFile(fpDst, os.O_RDWR, 0666)
@@ -35,18 +72,18 @@ func InsertAnyPageData(fpDst string) (err error) {
 	defer dstFile.Close()
 
 	var dstFileSomeLines []string
-	foundShouLu := false
+	foundLine := false
 	scanner := bufio.NewScanner(dstFile)
 	for scanner.Scan() {
 		line := scanner.Text()
 		dstFileSomeLines = append(dstFileSomeLines, line)
-		if strings.HasPrefix(line, "> 收录时间：") {
-			foundShouLu = true
+		if strings.HasPrefix(line, waitFindLineStr) {
+			foundLine = true
 			break
 		}
 	}
-	if !foundShouLu {
-		return fmt.Errorf("未找到 %q 的起始行", "> 收录时间：")
+	if !foundLine {
+		return fmt.Errorf("未找到 %q 的起始行", waitFindLineStr)
 	}
 
 	// 读取uniqueMd文件中的内容

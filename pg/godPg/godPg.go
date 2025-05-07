@@ -73,7 +73,7 @@ func InitStdPkgMdFile(pkgMenu MenuInfo) (err error) {
 	} else {
 		dir = filepath.Join(contants.OutputFolderName, baseDirname, pkgMenu.PFilename)
 	}
-	return preInitMdFile(pkgMenu.Index, false, useUnderlineIndexMd, dir, pkgMenu)
+	return preInitMdFile(false, useUnderlineIndexMd, dir, pkgMenu)
 }
 
 func InsertPkgDetailPageData(browserHwnd win.HWND, pkgMenu MenuInfo, page *rod.Page) (err error) {
@@ -106,11 +106,11 @@ func InsertPkgDetailPageData(browserHwnd win.HWND, pkgMenu MenuInfo, page *rod.P
 	} else {
 		mdFp = filepath.Join(contants.OutputFolderName, baseDirname, pkgMenu.PFilename, pkgMenu.Filename+".md")
 	}
-	err = pg.InsertAnyPageData(mdFp)
+	err = pg.InsertAnyPageData(mdFp, "> 收录时间：")
 	return
 }
 
-func preInitMdFile(index int, isBar, useUnderlineIndexMd bool, dir string, menuInfo MenuInfo) (err error) {
+func preInitMdFile(isBar, useUnderlineIndexMd bool, dir string, menuInfo MenuInfo) (err error) {
 	err = os.MkdirAll(dir, 0777)
 	if err != nil {
 		return fmt.Errorf("无法创建%s目录：%v\n", dir, err)
@@ -140,7 +140,7 @@ func preInitMdFile(index int, isBar, useUnderlineIndexMd bool, dir string, menuI
 title = "%s"
 linkTitle = "%s"
 date = %s
-type="docs"
+type = "docs"
 description = "%s"
 isCJKLanguage = true
 draft = false
@@ -151,13 +151,13 @@ draft = false
 > 原文：[%s](%s)
 >
 > 收录时间：%s
-`, menuInfo.MenuName, menuInfo.MenuName, date, "", index*10, menuInfo.Url, menuInfo.Url, fmt.Sprintf("`%s`", date)))
+`, menuInfo.MenuName, menuInfo.MenuName, date, "", menuInfo.Index*10, menuInfo.Url, menuInfo.Url, fmt.Sprintf("`%s`", date)))
 		} else {
 			_, err = mdF.WriteString(fmt.Sprintf(`+++
 title = "%s"
 date = %s
 weight = %d
-type="docs"
+type = "docs"
 description = "%s"
 isCJKLanguage = true
 draft = false
@@ -167,7 +167,7 @@ draft = false
 > 原文：[%s](%s)
 >
 > 收录时间：%s
-`, menuInfo.MenuName, date, index*10, "", menuInfo.Url, menuInfo.Url, fmt.Sprintf("`%s`", date)))
+`, menuInfo.MenuName, date, menuInfo.Index*10, "", menuInfo.Url, menuInfo.Url, fmt.Sprintf("`%s`", date)))
 		}
 
 		if err != nil {

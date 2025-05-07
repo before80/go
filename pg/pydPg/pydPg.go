@@ -132,7 +132,7 @@ func InsertBarMenuPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, page *rod
 	}
 
 	indexMdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, "_index.md")
-	err = pg.InsertAnyPageData(indexMdFp)
+	err = pg.InsertAnyPageData(indexMdFp, "> 收录时间：")
 	return
 }
 
@@ -152,7 +152,7 @@ func InsertSecondMenuPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, second
 	}
 
 	indexMdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, secondMenuInfo.Filename, "_index.md")
-	err = pg.InsertAnyPageData(indexMdFp)
+	err = pg.InsertAnyPageData(indexMdFp, "> 收录时间：")
 	return
 }
 
@@ -172,7 +172,7 @@ func InsertThirdMenuPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, secondM
 	}
 
 	indexMdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, secondMenuInfo.Filename, thirdMenuInfo.Filename, "_index.md")
-	err = pg.InsertAnyPageData(indexMdFp)
+	err = pg.InsertAnyPageData(indexMdFp, "> 收录时间：")
 	return
 }
 
@@ -200,7 +200,7 @@ func InsertSecondDetailPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, seco
 	}
 
 	mdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, secondMenuInfo.Filename+".md")
-	err = pg.InsertAnyPageData(mdFp)
+	err = pg.InsertAnyPageData(mdFp, "> 收录时间：")
 	return
 }
 
@@ -229,7 +229,7 @@ func InsertThirdDetailPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, secon
 	}
 
 	mdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, secondMenuInfo.Filename, thirdMenuInfo.Filename+".md")
-	err = pg.InsertAnyPageData(mdFp)
+	err = pg.InsertAnyPageData(mdFp, "> 收录时间：")
 	return
 }
 
@@ -257,7 +257,7 @@ func InsertFourthDetailPageData(browserHwnd win.HWND, barMenuInfo MenuInfo, seco
 	}
 
 	mdFp := filepath.Join(contants.OutputFolderName, barMenuInfo.Filename, secondMenuInfo.Filename, thirdMenuInfo.Filename, fourthMenuInfo.Filename+".md")
-	err = pg.InsertAnyPageData(mdFp)
+	err = pg.InsertAnyPageData(mdFp, "> 收录时间：")
 	return
 }
 
@@ -347,7 +347,7 @@ func preInitMdFile(index int, isBar, useUnderlineIndexMd bool, dir string, menuI
 title = "%s"
 linkTitle = "%s"
 date = %s
-type="docs"
+type = "docs"
 description = "%s"
 isCJKLanguage = true
 draft = false
@@ -364,7 +364,7 @@ draft = false
 title = "%s"
 date = %s
 weight = %d
-type="docs"
+type = "docs"
 description = "%s"
 isCJKLanguage = true
 draft = false

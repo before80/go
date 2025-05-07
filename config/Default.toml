@@ -9,9 +9,9 @@ wait_typora_copied_to_save_seconds = 3
 # 等待typora关闭窗口的秒数
 wait_typora_close_seconds = 2
 # 唯一markdown文件路径
-unique_md_filepath = "D:\\GPrjs\\py\\markdown\\do.md"
+unique_md_filepath = "D:\\GPrjs\\go\\markdown\\do.md"
 #
-output_filepath = "D:\\GPrjs\\py\\output"
+output_filepath = "D:\\GPrjs\\go\\output"
 # 是否使用代理来打开网页，1=使用，2=不使用
 use_proxy = 2
 # 代理使用的协议：http/https/socks4/socks5

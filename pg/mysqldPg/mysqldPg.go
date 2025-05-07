@@ -146,7 +146,7 @@ func InsertDetailPageData(browserHwnd win.HWND, dirPrefix string, menuInfo MenuI
 		return err
 	}
 	mdFilePath := filepath.Join(contants.OutputFolderName, dirPrefix, menuInfo.FilePath)
-	err = pg.InsertAnyPageData(mdFilePath)
+	err = pg.InsertAnyPageData(mdFilePath, "> 收录时间：")
 	return
 }
 
@@ -169,7 +169,7 @@ func preInitMdFile(dirPrefix string, menuInfo MenuInfo) (err error) {
 title = "%s"
 linkTitle = "%s"
 date = %s
-type="docs"
+type = "docs"
 description = "%s"
 isCJKLanguage = true
 draft = false
@@ -186,7 +186,7 @@ draft = false
 title = "%s"
 date = %s
 weight = %d
-type="docs"
+type = "docs"
 description = "%s"
 isCJKLanguage = true
 draft = false

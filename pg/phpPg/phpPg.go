@@ -132,7 +132,7 @@ func InitFirstMenuMdFile(browserHwnd win.HWND, firstMenuInfo MenuInfo, page *rod
 			useUnderlineIndexMd = true
 			dir = filepath.Join(contants.OutputFolderName, prefixDirname+firstMenuInfo.Filename)
 			curDir = dir
-			err = preInitMdFile(firstMenuInfo.Index, true, useUnderlineIndexMd, dir, firstMenuInfo)
+			err = preInitMdFile(true, useUnderlineIndexMd, dir, firstMenuInfo)
 			if err != nil {
 				return
 			}
@@ -165,7 +165,7 @@ func InitFirstMenuMdFile(browserHwnd win.HWND, firstMenuInfo MenuInfo, page *rod
 			useUnderlineIndexMd = true
 			dir = filepath.Join(contants.OutputFolderName, prefixDirname+firstMenuInfo.Filename)
 			curDir = dir
-			err = preInitMdFile(firstMenuInfo.Index, true, useUnderlineIndexMd, dir, firstMenuInfo)
+			err = preInitMdFile(true, useUnderlineIndexMd, dir, firstMenuInfo)
 			if err != nil {
 				return
 			}
@@ -247,7 +247,7 @@ func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir strin
 					useUnderlineIndexMd = true
 					dir = filepath.Join(curDir, subMenuInfo.Filename)
 					subCurDir = dir
-					err = preInitMdFile(subMenuInfo.Index, false, useUnderlineIndexMd, dir, subMenuInfo)
+					err = preInitMdFile(false, useUnderlineIndexMd, dir, subMenuInfo)
 					if err != nil {
 						return
 					}
@@ -281,7 +281,7 @@ func DealSubMenuInfo(browserHwnd win.HWND, subMenuInfos []MenuInfo, curDir strin
 					useUnderlineIndexMd = false
 					dir = curDir
 					subCurDir = dir
-					err = preInitMdFile(subMenuInfo.Index, false, useUnderlineIndexMd, dir, subMenuInfo)
+					err = preInitMdFile(false, useUnderlineIndexMd, dir, subMenuInfo)
 					if err != nil {
 						return
 					}
@@ -342,11 +342,11 @@ func InsertDetailPageData(browserHwnd win.HWND, mdFilePath string, menuInfo Menu
 		return fmt.Errorf("在处理%s=%s时，替换出现错误：%v", step, menuInfo.Url, err)
 	}
 
-	err = pg.InsertAnyPageData(mdFilePath)
+	err = pg.InsertAnyPageData(mdFilePath, "> 收录时间：")
 	return
 }
 
-func preInitMdFile(index int, isBar, useUnderlineIndexMd bool, dir string, menuInfo MenuInfo) (err error) {
+func preInitMdFile(isBar, useUnderlineIndexMd bool, dir string, menuInfo MenuInfo) (err error) {
 	err = os.MkdirAll(dir, 0777)
 	if err != nil {
 		return fmt.Errorf("无法创建%s目录：%v\n", dir, err)
@@ -376,7 +376,7 @@ func preInitMdFile(index int, isBar, useUnderlineIndexMd bool, dir string, menuI
 title = "%s"
 linkTitle = "%s"
 date = %s
-type="docs"
+type = "docs"
 description = "%s"
 isCJKLanguage = true
 draft = false
@@ -387,13 +387,13 @@ draft = false
 > 原文：[%s](%s)
 >
 > 收录时间：%s
-`, menuInfo.MenuName, menuInfo.MenuName, date, "", index*10, menuInfo.Url, menuInfo.Url, fmt.Sprintf("`%s`", date)))
+`, menuInfo.MenuName, menuInfo.MenuName, date, "", menuInfo.Index*10, menuInfo.Url, menuInfo.Url, fmt.Sprintf("`%s`", date)))
 		} else {
 			_, err = mdF.WriteString(fmt.Sprintf(`+++
 title = "%s"
 date = %s
 weight = %d
-type="docs"
+type = "docs"
 description = "%s"
 isCJKLanguage = true
 draft = false
@@ -403,7 +403,7 @@ draft = false
 > 原文：[%s](%s)
 >
 > 收录时间：%s
-`, menuInfo.MenuName, date, index*10, "", menuInfo.Url, menuInfo.Url, fmt.Sprintf("`%s`", date)))
+`, menuInfo.MenuName, date, menuInfo.Index*10, "", menuInfo.Url, menuInfo.Url, fmt.Sprintf("`%s`", date)))
 		}
 
 		if err != nil {
