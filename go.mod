@@ -3,9 +3,11 @@ module github.com/before80/go
 go 1.23.4
 
 require (
+	github.com/emirpasic/gods v1.18.1
 	github.com/go-rod/rod v0.116.2
 	github.com/go-vgo/robotgo v0.110.7
 	github.com/shirou/gopsutil/v4 v4.25.3
+	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
 	github.com/tailscale/win v0.0.0-20250213223159-5992cb43ca35
 )
@@ -33,7 +35,6 @@ require (
 	github.com/sourcegraph/conc v0.3.0 // indirect
 	github.com/spf13/afero v1.12.0 // indirect
 	github.com/spf13/cast v1.7.1 // indirect
-	github.com/spf13/cobra v1.9.1 // indirect
 	github.com/spf13/pflag v1.0.6 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
 	github.com/tklauser/go-sysconf v0.3.14 // indirect
