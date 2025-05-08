@@ -21,7 +21,7 @@ type ThirdPkgBaseInfo struct {
 }
 
 var ThirdPkgBaseInfos []ThirdPkgBaseInfo
-var initWaitHandleInfoCount = 0
+var initWaitHandleBaseInfoCount = 0
 
 func init() {
 	f, err := os.OpenFile("config/go_third_pkg.txt", os.O_RDONLY, 0666)
@@ -41,22 +41,22 @@ func init() {
 			ThirdPkgBaseInfos = append(ThirdPkgBaseInfos, ThirdPkgBaseInfo{PkgName: strings.TrimSpace(info[0]), Url: strings.TrimSpace(info[1]), Weight: weight})
 		}
 	}
-	initWaitHandleInfoCount = len(ThirdPkgBaseInfos)
+	initWaitHandleBaseInfoCount = len(ThirdPkgBaseInfos)
 }
 
-var forInfoStackLock sync.Mutex
-var forInfoStack = arraystack.New()
-var IsFirstTimeGetInfo = true
+var forBaseInfoStackLock sync.Mutex
+var forBaseInfoStack = arraystack.New()
+var IsFirstTimeGetBaseInfo = true
 
-// ReverseInfoSlice 倒序排列
-func ReverseInfoSlice(infoSlice []ThirdPkgBaseInfo) {
+// ReverseBaseInfoSlice 倒序排列
+func ReverseBaseInfoSlice(infoSlice []ThirdPkgBaseInfo) {
 	for i, j := 0, len(infoSlice)-1; i < j; i, j = i+1, j-1 {
 		infoSlice[i], infoSlice[j] = infoSlice[j], infoSlice[i]
 	}
 }
 
-// ShuffleInfoSlice 乱序排列
-func ShuffleInfoSlice(infoSlice []ThirdPkgBaseInfo) {
+// ShuffleBaseInfoSlice 乱序排列
+func ShuffleBaseInfoSlice(infoSlice []ThirdPkgBaseInfo) {
 	for i := len(infoSlice) - 1; i > 0; i-- {
 		// 生成一个从 0 到 i 的随机整数 j
 		j := rand.IntN(i + 1)
@@ -65,38 +65,38 @@ func ShuffleInfoSlice(infoSlice []ThirdPkgBaseInfo) {
 	}
 }
 
-// PushWaitDealInfoToStack 放入栈中
-func PushWaitDealInfoToStack(infoSlice []ThirdPkgBaseInfo) {
+// PushWaitDealBaseInfoToStack 放入栈中
+func PushWaitDealBaseInfoToStack(infoSlice []ThirdPkgBaseInfo) {
 	for _, v := range infoSlice {
-		forInfoStack.Push(v)
+		forBaseInfoStack.Push(v)
 	}
 }
 
-func GetNextInfoFromStack() (index int, info ThirdPkgBaseInfo, isEnd bool) {
-	forInfoStackLock.Lock()
-	defer forInfoStackLock.Unlock()
-	elCount := forInfoStack.Size()
+func GetNextBaseInfoFromStack() (index int, info ThirdPkgBaseInfo, isEnd bool) {
+	forBaseInfoStackLock.Lock()
+	defer forBaseInfoStackLock.Unlock()
+	elCount := forBaseInfoStack.Size()
 	lg.InfoToFile(fmt.Sprintf("elCount=%d\n", elCount))
-	if IsFirstTimeGetInfo {
-		IsFirstTimeGetInfo = false
+	if IsFirstTimeGetBaseInfo {
+		IsFirstTimeGetBaseInfo = false
 	}
 
-	v, ok := forInfoStack.Pop()
+	v, ok := forBaseInfoStack.Pop()
 	lg.InfoToFile(fmt.Sprintf("v=%v,ok=%v\n", v, ok))
 	if !ok || v == nil {
-		return initWaitHandleInfoCount - elCount, ThirdPkgBaseInfo{}, true
+		return initWaitHandleBaseInfoCount - elCount, ThirdPkgBaseInfo{}, true
 	}
 
-	return initWaitHandleInfoCount - elCount, v.(ThirdPkgBaseInfo), false
+	return initWaitHandleBaseInfoCount - elCount, v.(ThirdPkgBaseInfo), false
 }
 
-var isFirstTimeGetInfo = true
-var currentInfoIndex = -1
-var forInfoSliceLock sync.Mutex
+var isFirstTimeGetBaseInfo = true
+var currentBaseInfoIndex = -1
+var forBaseInfoSliceLock sync.Mutex
 
-func GetNextInfoFromSlice() (info ThirdPkgBaseInfo, err error) {
-	forInfoSliceLock.Lock()
-	defer forInfoSliceLock.Unlock()
+func GetNextBaseInfoFromSlice() (info ThirdPkgBaseInfo, err error) {
+	forBaseInfoSliceLock.Lock()
+	defer forBaseInfoSliceLock.Unlock()
 	l := len(ThirdPkgBaseInfos)
 	var index1 int
 	totalTempNum := 0
@@ -107,15 +107,15 @@ LabelForContinue:
 		return ThirdPkgBaseInfo{}, fmt.Errorf("获取不到可用信息")
 	}
 
-	if isFirstTimeGetInfo {
-		isFirstTimeGetInfo = false
-		currentInfoIndex = -1
+	if isFirstTimeGetBaseInfo {
+		isFirstTimeGetBaseInfo = false
+		currentBaseInfoIndex = -1
 	}
 
-	index1 = currentInfoIndex + 1
+	index1 = currentBaseInfoIndex + 1
 
 	if index1 >= l {
-		currentInfoIndex = 0
+		currentBaseInfoIndex = 0
 
 		if !ThirdPkgBaseInfos[0].CanUse {
 			goto LabelForContinue
@@ -129,18 +129,62 @@ LabelForContinue:
 		ThirdPkgBaseInfos[0].HadUse = true
 		return ThirdPkgBaseInfos[0], nil
 	} else {
-		currentInfoIndex = index1
+		currentBaseInfoIndex = index1
 		// 若该已经不能登录
-		if !ThirdPkgBaseInfos[currentInfoIndex].CanUse {
+		if !ThirdPkgBaseInfos[currentBaseInfoIndex].CanUse {
 			goto LabelForContinue
 		}
 
-		if ThirdPkgBaseInfos[currentInfoIndex].HadUse {
+		if ThirdPkgBaseInfos[currentBaseInfoIndex].HadUse {
 			goto LabelForContinue
 		}
 
 		// 设置为已经使用
-		ThirdPkgBaseInfos[currentInfoIndex].HadUse = true
-		return ThirdPkgBaseInfos[currentInfoIndex], nil
+		ThirdPkgBaseInfos[currentBaseInfoIndex].HadUse = true
+		return ThirdPkgBaseInfos[currentBaseInfoIndex], nil
 	}
+}
+
+type PkgInfo struct {
+	PkgName            string `json:"pkg_name"`
+	Filename           string `json:"filename"`
+	Url                string `json:"url"`
+	Dir                string `json:"dir"`
+	Weight             int    `json:"weight"`
+	NeedPreCreateIndex int    `json:"need_pre_create_index"`
+	Desc               string `json:"desc"`
+}
+
+var AllPkgInfos []PkgInfo
+var initWaitHandlePkgInfoCount int
+var forPkgInfoStackLock sync.Mutex
+var forPkgInfoStack = arraystack.New()
+var IsFirstTimeGetPkgInfo = true
+
+func PushWaitDealPkgInfoToStack(infoSlice []PkgInfo) {
+	for _, v := range infoSlice {
+		forPkgInfoStack.Push(v)
+	}
+}
+
+func InitWaitHandlePkgInfoCount() {
+	initWaitHandlePkgInfoCount = len(AllPkgInfos)
+}
+
+func GetNextPkgInfoFromStack() (index int, info PkgInfo, isEnd bool) {
+	forPkgInfoStackLock.Lock()
+	defer forPkgInfoStackLock.Unlock()
+	elCount := forPkgInfoStack.Size()
+	lg.InfoToFile(fmt.Sprintf("elCount=%d\n", elCount))
+	if IsFirstTimeGetPkgInfo {
+		IsFirstTimeGetPkgInfo = false
+	}
+
+	v, ok := forPkgInfoStack.Pop()
+	lg.InfoToFile(fmt.Sprintf("v=%v,ok=%v\n", v, ok))
+	if !ok || v == nil {
+		return initWaitHandlePkgInfoCount - elCount, PkgInfo{}, true
+	}
+
+	return initWaitHandlePkgInfoCount - elCount, v.(PkgInfo), false
 }

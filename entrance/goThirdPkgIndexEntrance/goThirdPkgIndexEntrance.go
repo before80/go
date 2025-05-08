@@ -15,13 +15,13 @@ import (
 func Do(cmd *cobra.Command) {
 	defaults.ResetWith("show=true")
 
-	goThirdPkgIndexNext.ReverseInfoSlice(goThirdPkgIndexNext.ThirdPkgBaseInfos)
-	goThirdPkgIndexNext.PushWaitDealInfoToStack(goThirdPkgIndexNext.ThirdPkgBaseInfos)
+	goThirdPkgIndexNext.ReverseBaseInfoSlice(goThirdPkgIndexNext.ThirdPkgBaseInfos)
+	goThirdPkgIndexNext.PushWaitDealBaseInfoToStack(goThirdPkgIndexNext.ThirdPkgBaseInfos)
 
 	//fmt.Println("thirdPkgBaseInfos")
 	threadNum, err := cmd.Flags().GetInt("thread-num")
 	if err != nil {
-		lg.InfoToFileAndStdOut(fmt.Sprintf("获取线程数标志时出错:%v\n", err))
+		lg.InfoToFileAndStdOut(fmt.Sprintf("获取线程数标志时出错：%v\n", err))
 		return
 	}
 
@@ -44,7 +44,18 @@ func Do(cmd *cobra.Command) {
 	var wg sync.WaitGroup
 	for i := 0; i < threadNum; i++ {
 		wg.Add(1)
-		go goThirdPkgIndexPg.DealWithPkg(i, &wg)
+		go goThirdPkgIndexPg.DealWithPkgBaseInfo(i, &wg)
+	}
+	wg.Wait()
+
+	err = goThirdPkgIndexPg.AppendLinesToFile()
+	if err != nil {
+		panic(err)
+	}
+
+	for i := 0; i < threadNum; i++ {
+		wg.Add(1)
+		go goThirdPkgIndexPg.DealWithPkgBaseInfo(i, &wg)
 	}
 	wg.Wait()
 
@@ -53,11 +64,6 @@ func Do(cmd *cobra.Command) {
 		if myBrowser.Browser != nil {
 			_ = myBrowser.Browser.Close()
 		}
-	}
-
-	err = goThirdPkgIndexPg.AppendLinesToFile()
-	if err != nil {
-		panic(err)
 	}
 
 	lg.InfoToFileAndStdOut("已完成处理！")

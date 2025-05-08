@@ -15,6 +15,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -188,4 +189,8 @@ draft = false
 		}
 	}
 	return
+}
+
+func DealWithPkg(threadIndex int, wg *sync.WaitGroup) {
+
 }

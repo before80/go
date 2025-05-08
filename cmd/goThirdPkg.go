@@ -24,10 +24,7 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	// 添加一个标志来接收 URL
-	goThirdPkgCmd.Flags().StringP("url", "l", "", "输入一个 URL")
-	goThirdPkgCmd.Flags().StringP("pkg-name", "n", "", "输入一个包名")
-	goThirdPkgCmd.Flags().IntP("weight", "w", 10, "输入一个权重数字")
+	goThirdPkgIndexCmd.Flags().IntP("thread-num", "t", 3, "输入线程数")
 	rootCmd.AddCommand(goThirdPkgCmd)
 
 	// Here you will define your flags and configuration settings.
