@@ -108,6 +108,16 @@ function removeNoFollowImg() {
     }
 }
 
+function removeUnitReadmeCollapseLink() {
+    const btns = document.querySelectorAll("button.UnitReadme-collapseLink")
+    if (btns.length > 0) {
+        btns.forEach(btn => {
+            btn.remove()
+        })
+    }
+
+}
+
 // 打开 div.Documentation-deprecatedDetails
 function openDeprecatedDetails() {
     const details = document.querySelectorAll(".Documentation-deprecatedDetails.js-deprecatedDetails")
@@ -362,6 +372,7 @@ removeUnitFiles();
 removeUnitDirectories();
 removeImg();
 removeNoFollowImg();
+removeUnitReadmeCollapseLink();
 addHeaderAnchorAndRemoveHeaderLink();
 modifyInTypeFuncHeaderLevel();
 replaceDocumentationDeprecatedTag();

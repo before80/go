@@ -32,7 +32,7 @@ func init() {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if line != "" {
+		if line != "" && !strings.HasPrefix(line, "#") {
 			info := strings.Split(line, "|")
 			if len(info) != 3 {
 				panic(fmt.Sprintf("config/go_third_pkg.txt中%q写法有错，未发现两个|", line))
@@ -163,6 +163,12 @@ var IsFirstTimeGetPkgInfo = true
 
 func InitWaitHandlePkgInfoCount() {
 	initWaitHandlePkgInfoCount = len(AllPkgInfos)
+}
+
+func ReversePkgInfoSlice(infoSlice []PkgInfo) {
+	for i, j := 0, len(infoSlice)-1; i < j; i, j = i+1, j-1 {
+		infoSlice[i], infoSlice[j] = infoSlice[j], infoSlice[i]
+	}
 }
 
 func PushWaitDealPkgInfoToStack(infoSlice []PkgInfo) {

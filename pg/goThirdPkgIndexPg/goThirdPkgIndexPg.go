@@ -287,7 +287,6 @@ draft = false
 		panic(fmt.Errorf("线程%d在网页%s中执行goThirdPkgJs.ReplaceJs遇到错误：%v", threadIndex, pkg.Url, err))
 	}
 
-	lg.InfoToFile(fmt.Sprintf("线程%d正要处理Copy,browerHwnd=%v,typoraHwnd=%v\n", threadIndex, browserHwnd, typoraHwnd))
 	_ = DoCopyAndPaste(threadIndex, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle)
 	lg.InfoToFile(fmt.Sprintf("线程%d正要处理Insert", threadIndex))
 	err = pg.InsertAnyPageData(fpDst, relUniqueMdFilePath, "> 仓库网址：")
@@ -329,8 +328,8 @@ func DoCopyAndPaste(threadIndex int, absUniqueMdFilePath, typoraWindowTitle, chr
 LabelForContinue:
 	lg.InfoToFile(fmt.Sprintf("线程%d中获取到的typoraHwnd=%v\n", threadIndex, typoraHwnd))
 
-	_ = wind.InChromePageDoCtrlAAndC(browserHwnd)
-	_ = wind.DoCtrlVAndS(typoraHwnd)
+	contentBytes, _ := wind.InChromePageDoCtrlAAndC(browserHwnd)
+	_ = wind.DoCtrlVAndS(typoraHwnd, contentBytes)
 	_ = win.SendMessage(typoraHwnd, win.WM_CLOSE, 0, 0)
 	time.Sleep(time.Duration(cfg.Default.WaitTyporaCloseSeconds) * time.Second)
 	return nil

@@ -3,9 +3,11 @@ package wind
 import (
 	"fmt"
 	"github.com/atotto/clipboard"
+	"github.com/before80/go/lg"
 	"github.com/go-vgo/robotgo"
 	"github.com/gonutz/w32/v3"
 	"github.com/tailscale/win"
+	"math"
 	"os/exec"
 	"runtime"
 	"strings"
@@ -101,22 +103,22 @@ func FindWindowByTitle2(keyword string) (win.HWND, error) {
 }
 
 // InChromePageDoCtrlAAndC 在浏览器页面中执行全选和复制操作
-func InChromePageDoCtrlAAndC(tempHwnd win.HWND) error {
+func InChromePageDoCtrlAAndC(tempHwnd win.HWND) (contentByes int, err error) {
 	hwnd := w32.HWND(tempHwnd)
 	// 清空剪贴板
 	_ = clipboard.WriteAll("")
 
 	// 激活主窗口
 	w32.ShowWindow(hwnd, w32.SW_RESTORE)
-	if err := w32.SetForegroundWindow(hwnd); err != nil {
-		return fmt.Errorf("SetForegroundWindow failed")
+	if err = w32.SetForegroundWindow(hwnd); err != nil {
+		return 0, fmt.Errorf("SetForegroundWindow failed")
 	}
 	time.Sleep(800 * time.Millisecond) // 增加延迟
 
 	// 定位内容区域
 	contentHwnd := FindChromeBrowserContentWindow(hwnd)
 	if contentHwnd == 0 {
-		return fmt.Errorf("内容窗口未找到")
+		return 0, fmt.Errorf("内容窗口未找到")
 	}
 
 	// 设置焦点并发送虚拟鼠标事件
@@ -130,13 +132,13 @@ func InChromePageDoCtrlAAndC(tempHwnd win.HWND) error {
 	pressCtrlAndKey(VK_C)
 
 	// 等待剪贴板数据
-	if err := waitForClipboard(); err != nil {
-		return err
+	if contentByes, err = waitForClipboard(); err != nil {
+		return 0, err
 	}
-	return nil
+	return contentByes, nil
 }
 
-func DoCtrlVAndS(tempHwnd win.HWND) error {
+func DoCtrlVAndS(tempHwnd win.HWND, contentBytes int) error {
 	hwnd := w32.HWND(tempHwnd)
 
 	// 激活主窗口
@@ -146,57 +148,59 @@ func DoCtrlVAndS(tempHwnd win.HWND) error {
 	}
 	time.Sleep(800 * time.Millisecond) // 增加延迟
 
-	// 定位内容区域
-	contentHwnd := FindChromeBrowserContentWindow(hwnd)
-	fmt.Printf("contentHwnd=%v\n", contentHwnd)
-	if contentHwnd == 0 {
-		return fmt.Errorf("内容窗口未找到")
-	}
-
-	// 设置焦点并发送虚拟鼠标事件
-	_, _ = w32.SetFocus(contentHwnd)
-	currentFocus := w32.GetFocus()
-	if currentFocus != contentHwnd {
-		_, _ = w32.SetFocus(contentHwnd)
-		time.Sleep(100 * time.Millisecond) // 给焦点设置一点时间
-		if w32.GetFocus() != contentHwnd {
-			fmt.Println("警告: 未能将焦点设置到Typora内容窗口")
-		}
-	}
+	//// 定位内容区域
+	//contentHwnd := FindChromeBrowserContentWindow(hwnd)
+	//fmt.Printf("contentHwnd=%v\n", contentHwnd)
+	//if contentHwnd == 0 {
+	//	return fmt.Errorf("内容窗口未找到")
+	//}
+	//
+	//// 设置焦点并发送虚拟鼠标事件
+	//_, _ = w32.SetFocus(contentHwnd)
+	//time.Sleep(100 * time.Millisecond) // 给焦点设置一点时间
+	//currentFocus := w32.GetFocus()
+	//if currentFocus != contentHwnd {
+	//	time.Sleep(200 * time.Millisecond) // 给焦点设置一点时间
+	//	if w32.GetFocus() != contentHwnd {
+	//		fmt.Println("警告: 未能将焦点设置到Typora内容窗口")
+	//	}
+	//}
 
 	// 模拟鼠标点击可以帮助某些应用正确接受键盘输入
 	// 获取窗口客户区的一个点
-	rect, _ := w32.GetClientRect(contentHwnd)
+	rect, _ := w32.GetClientRect(hwnd)
 	clientX, clientY := (rect.Right-rect.Left)/2, (rect.Bottom-rect.Top)/2
-	screenPoint, _ := w32.ClientToScreen(contentHwnd, w32.POINT{X: clientX, Y: clientY})
+	screenPoint, _ := w32.ClientToScreen(hwnd, w32.POINT{X: clientX, Y: clientY})
 
 	_ = w32.SetCursorPos(screenPoint.X, screenPoint.Y)
 	robotgo.Click()
-	fmt.Printf("触发点击左键\n")
-	time.Sleep(300 * time.Millisecond) // 点击后等待
+	lg.InfoToFile(fmt.Sprintf("触发点击左键\n"))
+	time.Sleep(50 * time.Millisecond) // 点击后等待
 
 	//w32.SendMessage(contentHwnd, w32.WM_MOUSEMOVE, 0, 0)
 	//time.Sleep(300 * time.Millisecond)
 
 	// 执行粘贴保存操作
 	pressCtrlAndKey(VK_V)
-	time.Sleep(200 * time.Millisecond)
+	lg.InfoToFileAndStdOut(fmt.Sprintf("contentBytes=%d\n", contentBytes))
+
+	time.Sleep(time.Duration(int(math.Ceil(float64(contentBytes)/5000))*100) * time.Millisecond)
 	pressCtrlAndKey(VK_S)
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	fmt.Printf("had v and s\n")
 	return nil
 }
 
-func waitForClipboard() error {
+func waitForClipboard() (int, error) {
 	start := time.Now()
-	for time.Since(start) < 5*time.Second {
+	for time.Since(start) < 10*time.Second {
 		if v, err := clipboard.ReadAll(); err == nil {
-			fmt.Printf("等待%v后获取到剪贴板的值:%v\n", time.Since(start), v)
-			return nil
+			//fmt.Printf("等待%v后获取到剪贴板的值:%v\n", time.Since(start), v)
+			return len(v), nil
 		}
 		time.Sleep(100 * time.Millisecond)
 	}
-	return fmt.Errorf("剪贴板超时")
+	return 0, fmt.Errorf("剪贴板超时")
 }
 
 func FindWindowHwndByWindowTitle(windowTitle string) (hwnd win.HWND, err error) {

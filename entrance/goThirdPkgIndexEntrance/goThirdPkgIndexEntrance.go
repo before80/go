@@ -55,6 +55,7 @@ func Do(cmd *cobra.Command) {
 	}
 	lg.InfoToFile(fmt.Sprintf("AllPkgInfos=%v\n", goThirdPkgIndexNext.AllPkgInfos))
 	goThirdPkgIndexNext.InitWaitHandlePkgInfoCount()
+	goThirdPkgIndexNext.ReversePkgInfoSlice(goThirdPkgIndexNext.AllPkgInfos)
 	goThirdPkgIndexNext.PushWaitDealPkgInfoToStack(goThirdPkgIndexNext.AllPkgInfos)
 
 	for i := 0; i < threadNum; i++ {
