@@ -5,16 +5,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/before80/go/bs"
+	"github.com/before80/go/cfg"
 	"github.com/before80/go/contants"
 	"github.com/before80/go/js/goThirdPkgIndexJs"
+	"github.com/before80/go/js/goThirdPkgJs"
 	"github.com/before80/go/lg"
 	"github.com/before80/go/next/goThirdPkgIndexNext"
+	"github.com/before80/go/pg"
+	"github.com/before80/go/tr"
+	"github.com/before80/go/wind"
 	"github.com/go-rod/rod/lib/proto"
 	"github.com/go-vgo/robotgo"
+	"github.com/tailscale/win"
 	"os"
 	"path/filepath"
 	"slices"
+	"strconv"
+	"strings"
 	"sync"
+	"time"
 )
 
 var Weight2PkgInfosMap = make(map[int][]goThirdPkgIndexNext.PkgInfo)
@@ -80,9 +89,22 @@ LabelForContinue:
 	goto LabelForContinue
 }
 
-func AppendLinesToFile() (err error) {
+func SortAndGenAllPkgInfos() {
+	var sPkgInfos [][]goThirdPkgIndexNext.PkgInfo
+	var weights []int
+	for k, _ := range Weight2PkgInfosMap {
+		weights = append(weights, k)
+	}
+	slices.Sort(weights)
+	for _, k := range weights {
+		sPkgInfos = append(sPkgInfos, Weight2PkgInfosMap[k])
+		goThirdPkgIndexNext.AllPkgInfos = append(goThirdPkgIndexNext.AllPkgInfos, Weight2PkgInfosMap[k]...)
+	}
+}
+
+func TruncWriteLinesToFile() (err error) {
 	var file *os.File
-	file, err = os.OpenFile(filepath.Join(contants.OutputFolderName, "go_third_pkg_info.txt"), os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0666)
+	file, err = os.OpenFile(filepath.Join(contants.OutputFolderName, "go_third_pkg_info.txt"), os.O_TRUNC|os.O_CREATE|os.O_RDWR, 0666)
 	if err != nil {
 		return fmt.Errorf("无法打开文件: %w", err)
 	}
@@ -96,7 +118,6 @@ func AppendLinesToFile() (err error) {
 	slices.Sort(weights)
 	for _, k := range weights {
 		sPkgInfos = append(sPkgInfos, Weight2PkgInfosMap[k])
-		goThirdPkgIndexNext.AllPkgInfos = append(goThirdPkgIndexNext.AllPkgInfos, Weight2PkgInfosMap[k]...)
 	}
 
 	// 创建一个写入器
@@ -128,6 +149,12 @@ func AppendLinesToFile() (err error) {
 	return nil
 }
 
+type VersionInfo struct {
+	Version    string `json:"version"`
+	CommitTime string `json:"commit_time"`
+	Repo       string `json:"repo"`
+}
+
 func DealWithPkgPageData(threadIndex int, wg *sync.WaitGroup) {
 	var err error
 	hadWgDone := false
@@ -141,14 +168,27 @@ func DealWithPkgPageData(threadIndex int, wg *sync.WaitGroup) {
 			}
 		}
 	}()
+	preDir := "go_third_pkg"
 	browser := bs.MyBrowserSlice[threadIndex].Browser
 	page := browser.MustPage()
-	browserHwnd := robotgo.GetHWND()
+
 	defer func() {
 		_ = page.Close()
 	}()
+	var pageTitle, chromePageWindowTitle string
+	var originArticle string
+	var fpDst string
+	var versionInfo VersionInfo
+	var result *proto.RuntimeRemoteObject
+	uniqueMdFilename := "do" + strconv.Itoa(threadIndex) + ".md"
+	relUniqueMdFilePath := filepath.Join("markdown", uniqueMdFilename)
+	typoraWindowTitle := uniqueMdFilename + " - Typora"
+	_, _ = pg.CreateFileIfNotExists(relUniqueMdFilePath)
+	absUniqueMdFilePath, _ := filepath.Abs(relUniqueMdFilePath)
 LabelForContinue:
+	date := time.Now().Format(time.RFC3339)
 	_, pkg, isEnd := goThirdPkgIndexNext.GetNextPkgInfoFromStack()
+	lg.InfoToFile(fmt.Sprintf("线程%d正要处理的pkg=%v\n", threadIndex, pkg))
 	if isEnd {
 		if !hadWgDone {
 			hadWgDone = true
@@ -157,10 +197,141 @@ LabelForContinue:
 		}
 		return
 	}
+	fpDst = filepath.Join(contants.OutputFolderName, preDir, pkg.Dir, pkg.Filename+".md")
+	_ = tr.TruncFileContent(relUniqueMdFilePath)
 
 	page.MustNavigate(pkg.Url)
 	page.MustWaitLoad()
 
+	result, err = page.Eval(goThirdPkgJs.GetVersionInfoJs)
+	if err != nil {
+		panic(fmt.Sprintf("线程%d在网页%s中执行goThirdPkgJs.GetVersionInfoJs遇到错误：%v", threadIndex, pkg.Url, err))
+	}
+	// 将结果序列化为 JSON 字节
+	jsonBytes, err := json.Marshal(result.Value)
+	if err != nil {
+		panic(fmt.Sprintf("线程%d在处理网页%s时执行json.Marshal遇到错误: %v", threadIndex, pkg.Url, err))
+	}
+
+	// 将 JSON 数据反序列化到结构体中
+	err = json.Unmarshal(jsonBytes, &versionInfo)
+	if err != nil {
+		panic(fmt.Sprintf("线程%d在处理网页%s时执行json.Unmarshal遇到错误: %v", threadIndex, pkg.Url, err))
+	}
+
+	// 创建 md文件和相关目录
+	if pkg.NeedPreCreateIndex == 1 {
+		preIndexMd := filepath.Join(contants.OutputFolderName, preDir, pkg.Dir, "_index.md")
+		preIndexMdTitles := strings.Split(pkg.Dir, "/")
+		preIndexMdTitle := preIndexMdTitles[len(preIndexMdTitles)-1]
+		hadExist, _ := pg.CreateFileIfNotExists(preIndexMd)
+
+		if !hadExist {
+			preIndexMdF, _ := os.OpenFile(preIndexMd, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+			if pkg.Url == "" {
+				originArticle = ""
+			} else {
+				originArticle = fmt.Sprintf("[%s](%s)", pkg.Url, pkg.Url)
+			}
+			_, _ = preIndexMdF.WriteString(fmt.Sprintf(`+++
+title = "%s"
+date = %s
+weight = %d
+type = "docs"
+description = "%s"
+isCJKLanguage = true
+draft = false
+
++++
+
+> 原文：%s
+>
+> 收录时间：%s
+`, preIndexMdTitle, date, pkg.Weight, "", originArticle, fmt.Sprintf("`%s`", date)))
+			_ = preIndexMdF.Close()
+		}
+	}
+
+	_, _ = pg.CreateFileIfNotExists(fpDst)
+	fpDstF, _ := os.OpenFile(fpDst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	_, _ = fpDstF.WriteString(fmt.Sprintf(`+++
+title = "%s"
+date = %s
+weight = %d
+type = "docs"
+description = "%s"
+isCJKLanguage = true
+draft = false
+
++++
+
+> 原文：[%s](%s)
+>
+> 收录时间：%s
+>
+> 版本：%s
+>
+> 发布时间：%s
+>
+> 仓库网址：[%s](%s)
+`, pkg.PkgName, date, pkg.Weight, "", pkg.Url, pkg.Url, fmt.Sprintf("`%s`", date), versionInfo.Version, versionInfo.CommitTime, versionInfo.Repo, versionInfo.Repo))
+	_ = fpDstF.Close()
+
+	// 获取当前网页的title，在后面会用来查找该网页所在窗口的操作句柄
+	result, _ = page.Eval(`() => { return document.title }`)
+	pageTitle = result.Value.String()
+	chromePageWindowTitle = pageTitle + " - Google Chrome"
+
+	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, goThirdPkgJs.ReplaceJs))
+	if err != nil {
+		panic(fmt.Errorf("线程%d在网页%s中执行goThirdPkgJs.ReplaceJs遇到错误：%v", threadIndex, pkg.Url, err))
+	}
+
+	lg.InfoToFile(fmt.Sprintf("线程%d正要处理Copy,browerHwnd=%v,typoraHwnd=%v\n", threadIndex, browserHwnd, typoraHwnd))
+	_ = DoCopyAndPaste(threadIndex, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle)
+	lg.InfoToFile(fmt.Sprintf("线程%d正要处理Insert", threadIndex))
+	err = pg.InsertAnyPageData(fpDst, relUniqueMdFilePath, "> 仓库网址：")
+	if err != nil {
+		panic(fmt.Errorf("线程%d在将网页%s中的内容插入到目标md文件时遇到错误：%v", threadIndex, pkg.Url, err))
+	}
+
+	goto LabelForContinue
 }
 
-var insertLock sync.Mutex
+var copyPasteLock sync.Mutex
+
+func DoCopyAndPaste(threadIndex int, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle string) (err error) {
+	copyPasteLock.Lock()
+	defer copyPasteLock.Unlock()
+	var typoraHwnd win.HWND
+	browserHwnd := robotgo.FindWindow(chromePageWindowTitle)
+
+	_ = wind.OpenTypora(absUniqueMdFilePath)
+	timeoutChan := time.After(10 * time.Second)
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			// 每隔 interval 时间检查一次条件
+			hwnd1 := robotgo.FindWindow(typoraWindowTitle)
+			lg.InfoToFile(fmt.Sprintf("%d - typoraHwnd=%v\n", threadIndex, hwnd1))
+			if hwnd1 != 0 {
+				typoraHwnd = hwnd1
+				goto LabelForContinue
+			}
+			//hwnd1, err1 = wind.FindWindowByTitle(uniqueMdFilename + " - Typora")
+		case <-timeoutChan:
+			// 超时后退出循环
+			goto LabelForContinue
+		}
+	}
+LabelForContinue:
+	lg.InfoToFile(fmt.Sprintf("线程%d中获取到的typoraHwnd=%v\n", threadIndex, typoraHwnd))
+
+	_ = wind.InChromePageDoCtrlAAndC(browserHwnd)
+	_ = wind.DoCtrlVAndS(typoraHwnd)
+	_ = win.SendMessage(typoraHwnd, win.WM_CLOSE, 0, 0)
+	time.Sleep(time.Duration(cfg.Default.WaitTyporaCloseSeconds) * time.Second)
+	return nil
+}

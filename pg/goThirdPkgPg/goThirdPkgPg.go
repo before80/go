@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/before80/go/cfg"
 	"github.com/before80/go/contants"
 	"github.com/before80/go/js/goThirdPkgJs"
 	"github.com/before80/go/pg"
@@ -56,7 +57,7 @@ func InsertPkgDetailPageData(browserHwnd win.HWND, baseDirname string, menuInfo 
 		return err
 	}
 
-	err = pg.InsertAnyPageData(mdFp, "> 仓库网址：")
+	err = pg.InsertAnyPageData(mdFp, cfg.Default.UniqueMdFilepath, "> 收录时间：")
 	return
 }
 

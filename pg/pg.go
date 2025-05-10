@@ -62,8 +62,7 @@ draft = false
 }
 
 // InsertAnyPageData 插入页面数据
-func InsertAnyPageData(fpDst string, waitFindLineStr string) (err error) {
-	fpSrc := cfg.Default.UniqueMdFilepath
+func InsertAnyPageData(fpDst, fpSrc string, waitFindLineStr string) (err error) {
 	var dstFile, srcFile *os.File
 	dstFile, err = os.OpenFile(fpDst, os.O_RDWR, 0666)
 	if err != nil {
@@ -161,4 +160,36 @@ func DealUniqueMd(browserHwnd win.HWND, curUrl, step string) (err error) {
 	time.Sleep(time.Duration(cfg.Default.WaitTyporaCloseSeconds) * time.Second)
 
 	return nil
+}
+
+// CreateFileIfNotExists 如果文件不存在，则创建该文件及其所有上级目录
+func CreateFileIfNotExists(filePath string) (hadExist bool, err error) {
+	// 检查文件是否已经存在
+	if _, err = os.Stat(filePath); err == nil {
+		return true, nil
+	} else if !os.IsNotExist(err) {
+		// 如果错误不是“不存在”，说明有其他问题
+		return false, fmt.Errorf("检查文件是否存在时出错: %w", err)
+	}
+
+	// 文件不存在，继续创建目录和文件
+	// 获取父目录路径
+	dir := filepath.Dir(filePath)
+
+	// 创建所有必要的父目录
+	if dir != "." && dir != "" {
+		if err = os.MkdirAll(dir, 0666); err != nil {
+			return false, fmt.Errorf("创建目录失败: %w", err)
+		}
+	}
+
+	// 创建新文件（如果已存在则不会覆盖）
+	file, err := os.Create(filePath)
+	if err != nil {
+		return false, fmt.Errorf("创建文件失败: %w", err)
+	}
+	defer file.Close()
+
+	//fmt.Printf("成功创建文件: %s\n", filePath)
+	return false, nil
 }

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/before80/go/cfg"
 	"github.com/before80/go/contants"
 	"github.com/before80/go/js/godJs"
 	"github.com/before80/go/pg"
@@ -106,7 +107,7 @@ func InsertPkgDetailPageData(browserHwnd win.HWND, pkgMenu MenuInfo, page *rod.P
 	} else {
 		mdFp = filepath.Join(contants.OutputFolderName, baseDirname, pkgMenu.PFilename, pkgMenu.Filename+".md")
 	}
-	err = pg.InsertAnyPageData(mdFp, "> 收录时间：")
+	err = pg.InsertAnyPageData(mdFp, cfg.Default.UniqueMdFilepath, "> 收录时间：")
 	return
 }
 

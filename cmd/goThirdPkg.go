@@ -24,7 +24,7 @@ to quickly create a Cobra application.`,
 }
 
 func init() {
-	goThirdPkgIndexCmd.Flags().IntP("thread-num", "t", 3, "输入线程数")
+	goThirdPkgCmd.Flags().IntP("thread-num", "t", 3, "输入线程数")
 	rootCmd.AddCommand(goThirdPkgCmd)
 
 	// Here you will define your flags and configuration settings.

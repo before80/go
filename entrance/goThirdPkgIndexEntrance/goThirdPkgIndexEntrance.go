@@ -48,14 +48,18 @@ func Do(cmd *cobra.Command) {
 	}
 	wg.Wait()
 
-	err = goThirdPkgIndexPg.AppendLinesToFile()
+	goThirdPkgIndexPg.SortAndGenAllPkgInfos()
+	err = goThirdPkgIndexPg.TruncWriteLinesToFile()
 	if err != nil {
 		panic(err)
 	}
+	lg.InfoToFile(fmt.Sprintf("AllPkgInfos=%v\n", goThirdPkgIndexNext.AllPkgInfos))
+	goThirdPkgIndexNext.InitWaitHandlePkgInfoCount()
+	goThirdPkgIndexNext.PushWaitDealPkgInfoToStack(goThirdPkgIndexNext.AllPkgInfos)
 
 	for i := 0; i < threadNum; i++ {
 		wg.Add(1)
-		go goThirdPkgIndexPg.DealWithPkgBaseInfo(i, &wg)
+		go goThirdPkgIndexPg.DealWithPkgPageData(i, &wg)
 	}
 	wg.Wait()
 

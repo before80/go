@@ -161,14 +161,14 @@ var forPkgInfoStackLock sync.Mutex
 var forPkgInfoStack = arraystack.New()
 var IsFirstTimeGetPkgInfo = true
 
+func InitWaitHandlePkgInfoCount() {
+	initWaitHandlePkgInfoCount = len(AllPkgInfos)
+}
+
 func PushWaitDealPkgInfoToStack(infoSlice []PkgInfo) {
 	for _, v := range infoSlice {
 		forPkgInfoStack.Push(v)
 	}
-}
-
-func InitWaitHandlePkgInfoCount() {
-	initWaitHandlePkgInfoCount = len(AllPkgInfos)
 }
 
 func GetNextPkgInfoFromStack() (index int, info PkgInfo, isEnd bool) {

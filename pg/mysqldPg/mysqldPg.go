@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/before80/go/cfg"
 	"github.com/before80/go/contants"
 	"github.com/before80/go/js/mysqldJs"
 	"github.com/before80/go/lg"
@@ -146,7 +147,7 @@ func InsertDetailPageData(browserHwnd win.HWND, dirPrefix string, menuInfo MenuI
 		return err
 	}
 	mdFilePath := filepath.Join(contants.OutputFolderName, dirPrefix, menuInfo.FilePath)
-	err = pg.InsertAnyPageData(mdFilePath, "> 收录时间：")
+	err = pg.InsertAnyPageData(mdFilePath, cfg.Default.UniqueMdFilepath, "> 收录时间：")
 	return
 }
 

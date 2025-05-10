@@ -1,22 +1,5 @@
-cobra|https://pkg.go.dev/github.com/spf13/cobra|100
-viper|https://pkg.go.dev/github.com/spf13/viper|110
-pflag|https://pkg.go.dev/github.com/spf13/pflag|120
-gorm|https://pkg.go.dev/gorm.io/gorm|130
-go-redis|https://pkg.go.dev/github.com/redis/go-redis/v9|140
-
-logrus|https://pkg.go.dev/github.com/sirupsen/logrus|150
-zap|https://pkg.go.dev/go.uber.org/zap|160
-
-gods|https://pkg.go.dev/github.com/emirpasic/gods/v2@v2.0.0-alpha|1000
-
 gin|https://pkg.go.dev/github.com/gin-gonic/gin|5000
 echo|https://pkg.go.dev/github.com/labstack/echo/v4|5010
-chi|https://pkg.go.dev/github.com/go-chi/chi/v5|5020
-fiber|https://pkg.go.dev/github.com/gofiber/fiber/v3|5030
-iris|https://pkg.go.dev/github.com/kataras/iris/v12|5040
-buffalo|https://pkg.go.dev/github.com/gobuffalo/buffalo|5050
-
-robotgo|https://pkg.go.dev/github.com/go-vgo/robotgo|9000
 
 
 

@@ -2,38 +2,201 @@ package wind
 
 import (
 	"fmt"
+	"github.com/atotto/clipboard"
 	"github.com/go-vgo/robotgo"
+	"github.com/gonutz/w32/v3"
 	"github.com/tailscale/win"
 	"os/exec"
 	"runtime"
+	"strings"
+	"sync"
 	"syscall"
-	"unsafe"
+	"time"
 )
 
-// GetWindowText 使用 GetWindowTextW 获取窗口标题
-func GetWindowText(hwnd win.HWND) (string, error) {
-	user32 := syscall.NewLazyDLL("user32.dll")
-	procGetWindowText := user32.NewProc("GetWindowTextW")
+type windowSearchParams struct {
+	keyword string
+	result  w32.HWND
+}
 
-	// 分配缓冲区
-	const maxChars = 256
-	buffer := make([]uint16, maxChars)
+var (
+	searchParams *windowSearchParams
+	cbOnce       sync.Once
+	cbPtr        uintptr
+)
 
-	// 调用 GetWindowTextW
-	ret, _, err := procGetWindowText.Call(
-		uintptr(hwnd),                       // 窗口句柄
-		uintptr(unsafe.Pointer(&buffer[0])), // 缓冲区
-		uintptr(maxChars),                   // 缓冲区大小
-	)
-	if ret == 0 {
-		if errno, ok := err.(syscall.Errno); ok && errno != 0 {
-			return "", fmt.Errorf("GetWindowText 失败: %v", err)
+func initEnumWindowsCallback() {
+	cbPtr = syscall.NewCallback(func(hwnd, lparam uintptr) uintptr {
+		h := w32.HWND(hwnd)
+		if !w32.IsWindowVisible(h) {
+			return 1
 		}
-		return "", nil // 窗口没有标题
+
+		title, err := w32.GetWindowText(h)
+		if err != nil {
+			return 1
+		}
+
+		if strings.Contains(title, searchParams.keyword) {
+			searchParams.result = h
+			return 0 // stop
+		}
+		return 1 // continue
+	})
+}
+
+// FindWindowByTitle 封装查找窗口句柄的函数
+func FindWindowByTitle(keyword string) (win.HWND, error) {
+	cbOnce.Do(initEnumWindowsCallback)
+
+	searchParams = &windowSearchParams{keyword: keyword}
+
+	err := w32.EnumWindows(cbPtr, 0)
+	if err != nil {
+		return 0, fmt.Errorf("EnumWindows failed: %v", err)
 	}
 
-	// 将宽字符转换为 Go 字符串
-	return syscall.UTF16ToString(buffer), nil
+	if searchParams.result == 0 {
+		return 0, fmt.Errorf("no window found containing title: %q", keyword)
+	}
+	return win.HWND(searchParams.result), nil
+}
+
+// FindWindowByTitle2 封装查找窗口句柄的函数
+// 反复创建了过多的 syscall.NewCallback（或 syscall.NewCallbackCDecl）对象，而它们没有被释放或重复创建导致耗尽系统资源。
+// 最终导致执行时报错：fatal error: too many callback functions
+func FindWindowByTitle2(keyword string) (win.HWND, error) {
+	//fmt.Printf("keyword=%s\n", keyword)
+	var result w32.HWND
+
+	var cbFunc = func(hwnd uintptr, lparam uintptr) uintptr {
+		h := w32.HWND(hwnd)
+		if !w32.IsWindowVisible(h) {
+			return 1
+		}
+
+		title, err := w32.GetWindowText(h)
+		//fmt.Printf("title=%s,err=%v\n", title, err)
+		if err != nil {
+			return 1
+		}
+
+		//fmt.Printf("strings.Contains(%q, %q)=%v\n", title, keyword, strings.Contains(title, keyword))
+		if strings.Contains(title, keyword) {
+			result = h
+			return 0 // stop
+		}
+		return 1 // continue
+	}
+
+	// 这里 callback 保存在变量中，防止作用域问题
+	callback := syscall.NewCallback(cbFunc)
+
+	_ = w32.EnumWindows(callback, 0)
+
+	if result == 0 {
+		return 0, fmt.Errorf("no window found containing title: %q", keyword)
+	}
+	return win.HWND(result), nil
+}
+
+// InChromePageDoCtrlAAndC 在浏览器页面中执行全选和复制操作
+func InChromePageDoCtrlAAndC(tempHwnd win.HWND) error {
+	hwnd := w32.HWND(tempHwnd)
+	// 清空剪贴板
+	_ = clipboard.WriteAll("")
+
+	// 激活主窗口
+	w32.ShowWindow(hwnd, w32.SW_RESTORE)
+	if err := w32.SetForegroundWindow(hwnd); err != nil {
+		return fmt.Errorf("SetForegroundWindow failed")
+	}
+	time.Sleep(800 * time.Millisecond) // 增加延迟
+
+	// 定位内容区域
+	contentHwnd := FindChromeBrowserContentWindow(hwnd)
+	if contentHwnd == 0 {
+		return fmt.Errorf("内容窗口未找到")
+	}
+
+	// 设置焦点并发送虚拟鼠标事件
+	_, _ = w32.SetFocus(contentHwnd)
+	w32.SendMessage(contentHwnd, w32.WM_MOUSEMOVE, 0, 0)
+	time.Sleep(300 * time.Millisecond)
+
+	// 执行复制操作
+	pressCtrlAndKey(VK_A)
+	time.Sleep(200 * time.Millisecond)
+	pressCtrlAndKey(VK_C)
+
+	// 等待剪贴板数据
+	if err := waitForClipboard(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func DoCtrlVAndS(tempHwnd win.HWND) error {
+	hwnd := w32.HWND(tempHwnd)
+
+	// 激活主窗口
+	w32.ShowWindow(hwnd, w32.SW_RESTORE)
+	if err := w32.SetForegroundWindow(hwnd); err != nil {
+		return fmt.Errorf("SetForegroundWindow failed")
+	}
+	time.Sleep(800 * time.Millisecond) // 增加延迟
+
+	// 定位内容区域
+	contentHwnd := FindChromeBrowserContentWindow(hwnd)
+	fmt.Printf("contentHwnd=%v\n", contentHwnd)
+	if contentHwnd == 0 {
+		return fmt.Errorf("内容窗口未找到")
+	}
+
+	// 设置焦点并发送虚拟鼠标事件
+	_, _ = w32.SetFocus(contentHwnd)
+	currentFocus := w32.GetFocus()
+	if currentFocus != contentHwnd {
+		_, _ = w32.SetFocus(contentHwnd)
+		time.Sleep(100 * time.Millisecond) // 给焦点设置一点时间
+		if w32.GetFocus() != contentHwnd {
+			fmt.Println("警告: 未能将焦点设置到Typora内容窗口")
+		}
+	}
+
+	// 模拟鼠标点击可以帮助某些应用正确接受键盘输入
+	// 获取窗口客户区的一个点
+	rect, _ := w32.GetClientRect(contentHwnd)
+	clientX, clientY := (rect.Right-rect.Left)/2, (rect.Bottom-rect.Top)/2
+	screenPoint, _ := w32.ClientToScreen(contentHwnd, w32.POINT{X: clientX, Y: clientY})
+
+	_ = w32.SetCursorPos(screenPoint.X, screenPoint.Y)
+	robotgo.Click()
+	fmt.Printf("触发点击左键\n")
+	time.Sleep(300 * time.Millisecond) // 点击后等待
+
+	//w32.SendMessage(contentHwnd, w32.WM_MOUSEMOVE, 0, 0)
+	//time.Sleep(300 * time.Millisecond)
+
+	// 执行粘贴保存操作
+	pressCtrlAndKey(VK_V)
+	time.Sleep(200 * time.Millisecond)
+	pressCtrlAndKey(VK_S)
+	time.Sleep(200 * time.Millisecond)
+	fmt.Printf("had v and s\n")
+	return nil
+}
+
+func waitForClipboard() error {
+	start := time.Now()
+	for time.Since(start) < 5*time.Second {
+		if v, err := clipboard.ReadAll(); err == nil {
+			fmt.Printf("等待%v后获取到剪贴板的值:%v\n", time.Since(start), v)
+			return nil
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return fmt.Errorf("剪贴板超时")
 }
 
 func FindWindowHwndByWindowTitle(windowTitle string) (hwnd win.HWND, err error) {
@@ -42,24 +205,6 @@ func FindWindowHwndByWindowTitle(windowTitle string) (hwnd win.HWND, err error) 
 		return 0, fmt.Errorf(`未找到 '%s' 窗口`, windowTitle)
 	}
 	return hwnd, nil
-}
-
-func FindWindowHwndByPId(pid int32) {
-
-}
-
-func SetChromeWindowsName(hwnd win.HWND, windowTitle string) {
-	robotgo.SetActiveWindow(hwnd)
-	robotgo.SetForeg(hwnd)
-	_ = robotgo.KeyTap("e", "alt")
-	robotgo.MilliSleep(500)
-	_ = robotgo.KeyTap("l")
-	robotgo.MilliSleep(500)
-	_ = robotgo.KeyTap("w")
-	robotgo.MilliSleep(500)
-	robotgo.TypeStr(windowTitle)
-	_ = robotgo.KeyTap("enter")
-	robotgo.MilliSleep(500)
 }
 
 func OpenTypora(filePath string) error {
@@ -102,7 +247,7 @@ func setActiveAndForeg(hwnd win.HWND) {
 	robotgo.SetActiveWindow(hwnd)
 	robotgo.MilliSleep(100)
 	robotgo.SetForeg(hwnd)
-	robotgo.MilliSleep(100)
+	robotgo.MilliSleep(800)
 }
 
 func CtrlV(hwnd win.HWND) {

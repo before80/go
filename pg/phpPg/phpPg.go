@@ -342,7 +342,7 @@ func InsertDetailPageData(browserHwnd win.HWND, mdFilePath string, menuInfo Menu
 		return fmt.Errorf("在处理%s=%s时，替换出现错误：%v", step, menuInfo.Url, err)
 	}
 
-	err = pg.InsertAnyPageData(mdFilePath, "> 收录时间：")
+	err = pg.InsertAnyPageData(mdFilePath, cfg.Default.UniqueMdFilepath, "> 收录时间：")
 	return
 }
 

@@ -3,9 +3,11 @@ module github.com/before80/go
 go 1.23.4
 
 require (
+	github.com/atotto/clipboard v0.1.4
 	github.com/emirpasic/gods v1.18.1
 	github.com/go-rod/rod v0.116.2
 	github.com/go-vgo/robotgo v0.110.7
+	github.com/gonutz/w32/v3 v3.0.0-beta9
 	github.com/shirou/gopsutil/v4 v4.25.3
 	github.com/spf13/cobra v1.9.1
 	github.com/spf13/viper v1.20.1
