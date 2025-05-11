@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 )
 
 type ThirdPkgBaseInfo struct {
@@ -79,6 +80,8 @@ func GetNextBaseInfoFromStack() (index int, info ThirdPkgBaseInfo, isEnd bool) {
 	lg.InfoToFile(fmt.Sprintf("elCount=%d\n", elCount))
 	if IsFirstTimeGetBaseInfo {
 		IsFirstTimeGetBaseInfo = false
+	} else {
+		time.Sleep(2 * time.Second)
 	}
 
 	v, ok := forBaseInfoStack.Pop()

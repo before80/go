@@ -128,9 +128,9 @@ func InChromePageDoCtrlAAndC(tempHwnd win.HWND) (contentByes int, err error) {
 
 	// 执行复制操作
 	pressCtrlAndKey(VK_A)
-	time.Sleep(200 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond)
 	pressCtrlAndKey(VK_C)
-
+	time.Sleep(300 * time.Millisecond)
 	// 等待剪贴板数据
 	if contentByes, err = waitForClipboard(); err != nil {
 		return 0, err
@@ -146,7 +146,7 @@ func DoCtrlVAndS(tempHwnd win.HWND, contentBytes int) error {
 	if err := w32.SetForegroundWindow(hwnd); err != nil {
 		return fmt.Errorf("SetForegroundWindow failed")
 	}
-	time.Sleep(800 * time.Millisecond) // 增加延迟
+	time.Sleep(50 * time.Millisecond) // 增加延迟
 
 	//// 定位内容区域
 	//contentHwnd := FindChromeBrowserContentWindow(hwnd)
@@ -183,8 +183,12 @@ func DoCtrlVAndS(tempHwnd win.HWND, contentBytes int) error {
 	// 执行粘贴保存操作
 	pressCtrlAndKey(VK_V)
 	lg.InfoToFileAndStdOut(fmt.Sprintf("contentBytes=%d\n", contentBytes))
+	if contentBytes > 10000 {
+		time.Sleep(time.Duration(int(math.Ceil(float64(contentBytes)/5000))*300) * time.Millisecond)
+	} else {
+		time.Sleep(time.Duration(int(math.Ceil(float64(contentBytes)/5000))*100) * time.Millisecond)
+	}
 
-	time.Sleep(time.Duration(int(math.Ceil(float64(contentBytes)/5000))*100) * time.Millisecond)
 	pressCtrlAndKey(VK_S)
 	time.Sleep(100 * time.Millisecond)
 	fmt.Printf("had v and s\n")

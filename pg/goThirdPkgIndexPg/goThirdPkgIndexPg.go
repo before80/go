@@ -287,7 +287,7 @@ draft = false
 		panic(fmt.Errorf("线程%d在网页%s中执行goThirdPkgJs.ReplaceJs遇到错误：%v", threadIndex, pkg.Url, err))
 	}
 
-	_ = DoCopyAndPaste(threadIndex, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle)
+	_ = DoCopyAndPaste(threadIndex, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle, pkg.Url)
 	lg.InfoToFile(fmt.Sprintf("线程%d正要处理Insert", threadIndex))
 	err = pg.InsertAnyPageData(fpDst, relUniqueMdFilePath, "> 仓库网址：")
 	if err != nil {
@@ -299,7 +299,7 @@ draft = false
 
 var copyPasteLock sync.Mutex
 
-func DoCopyAndPaste(threadIndex int, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle string) (err error) {
+func DoCopyAndPaste(threadIndex int, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle, url string) (err error) {
 	copyPasteLock.Lock()
 	defer copyPasteLock.Unlock()
 	var typoraHwnd win.HWND
@@ -328,7 +328,11 @@ func DoCopyAndPaste(threadIndex int, absUniqueMdFilePath, typoraWindowTitle, chr
 LabelForContinue:
 	lg.InfoToFile(fmt.Sprintf("线程%d中获取到的typoraHwnd=%v\n", threadIndex, typoraHwnd))
 
-	contentBytes, _ := wind.InChromePageDoCtrlAAndC(browserHwnd)
+	contentBytes, err1 := wind.InChromePageDoCtrlAAndC(browserHwnd)
+	lg.InfoToFile(fmt.Sprintf("在页面%s获取到的字节数为：%d\n", url, contentBytes))
+	if err1 != nil {
+		lg.ErrorToFile(fmt.Sprintf("在浏览器中进行复制遇到错误：%v\n", err1))
+	}
 	_ = wind.DoCtrlVAndS(typoraHwnd, contentBytes)
 	_ = win.SendMessage(typoraHwnd, win.WM_CLOSE, 0, 0)
 	time.Sleep(time.Duration(cfg.Default.WaitTyporaCloseSeconds) * time.Second)
