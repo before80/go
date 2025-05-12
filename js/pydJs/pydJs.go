@@ -8,6 +8,9 @@ var GetBarMenusJs string
 //go:embed GetMenus.js
 var GetMenusJs string
 
+//go:embed GetMenus2.js
+var GetMenusJs2 string
+
 //go:embed GetSecondMenus.js
 var GetSecondMenusJs string
 

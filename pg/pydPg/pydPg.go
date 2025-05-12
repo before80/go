@@ -106,9 +106,14 @@ LabelForContinue:
 	page.MustNavigate(curMenu.Url)
 	page.MustWaitLoad()
 
-	result, err = page.Eval(pydJs.GetMenusJs)
+	if curMenu.IsTopMenu == 1 && curMenu.Filename == "howto" {
+		result, err = page.Eval(pydJs.GetMenusJs2)
+	} else {
+		result, err = page.Eval(pydJs.GetMenusJs)
+	}
+
 	if err != nil {
-		panic(fmt.Sprintf("线程%d在网页%s中执行goThirdPkgJs.GetVersionInfoJs遇到错误：%v", threadIndex, curMenu.Url, err))
+		panic(fmt.Sprintf("线程%d在网页%s中执行pydJs.GetMenusJs遇到错误：%v", threadIndex, curMenu.Url, err))
 	}
 	// 将结果序列化为 JSON 字节
 	jsonBytes, err := json.Marshal(result.Value)
