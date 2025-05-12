@@ -3,7 +3,7 @@ package pydNext
 import (
 	"fmt"
 	"github.com/before80/go/lg"
-	"github.com/emirpasic/gods/stacks/arraystack"
+	"github.com/emirpasic/gods/queues/arrayqueue"
 	"math/rand/v2"
 	"sync"
 	"time"
@@ -21,7 +21,7 @@ type MenuInfo struct {
 }
 
 var forMenuInfoStackLock sync.Mutex
-var forMenuInfoStack = arraystack.New()
+var forMenuInfoStack = arrayqueue.New()
 var IsFirstTimeGetMenuInfo = true
 
 // ReverseMenuInfoSlice 倒序排列
@@ -46,7 +46,7 @@ func PushWaitDealMenuInfoToStack(infoSlice []MenuInfo) {
 	forMenuInfoStackLock.Lock()
 	defer forMenuInfoStackLock.Unlock()
 	for _, v := range infoSlice {
-		forMenuInfoStack.Push(v)
+		forMenuInfoStack.Enqueue(v)
 	}
 }
 
@@ -55,7 +55,7 @@ func ReversePushWaitDealMenuInfoToStack(infoSlice []MenuInfo) {
 	defer forMenuInfoStackLock.Unlock()
 	ReverseMenuInfoSlice(infoSlice)
 	for _, v := range infoSlice {
-		forMenuInfoStack.Push(v)
+		forMenuInfoStack.Enqueue(v)
 	}
 }
 
@@ -70,7 +70,7 @@ func GetNextMenuInfoFromStack() (info MenuInfo, isEnd bool) {
 		time.Sleep(2 * time.Second)
 	}
 
-	v, ok := forMenuInfoStack.Pop()
+	v, ok := forMenuInfoStack.Dequeue()
 	lg.InfoToFile(fmt.Sprintf("v=%v,ok=%v\n", v, ok))
 	if !ok || v == nil {
 		return MenuInfo{}, true

@@ -14,6 +14,7 @@ import (
 	"github.com/tailscale/win"
 	"strconv"
 	"sync"
+	"time"
 )
 
 func Do0() {
@@ -176,6 +177,9 @@ func Do0() {
 }
 
 func Do(cmd *cobra.Command) {
+	startTime := time.Now()
+	lg.InfoToFileAndStdOut(fmt.Sprintf("开始时间：%v\n", startTime))
+
 	var err error
 	defer func() {
 		if err != nil {
@@ -192,7 +196,7 @@ func Do(cmd *cobra.Command) {
 	page = browser.MustPage()
 	var barMenuInfos []pydNext.MenuInfo
 	barMenuInfos, err = pydPg.GetBarMenus(page, "https://docs.python.org/zh-cn/3.13/index.html")
-	pydNext.ReversePushWaitDealMenuInfoToStack(barMenuInfos)
+	pydNext.PushWaitDealMenuInfoToStack(barMenuInfos)
 	_ = browser.Close()
 	//fmt.Println("thirdPkgBaseInfos")
 	threadNum, err := cmd.Flags().GetInt("thread-num")
@@ -222,5 +226,8 @@ func Do(cmd *cobra.Command) {
 		go pydPg.DealWithMenuPageData(i, &wg)
 	}
 	wg.Wait()
+	lg.InfoToFileAndStdOut(fmt.Sprintf("结束时间：%v\n", time.Now()))
+	lg.InfoToFileAndStdOut(fmt.Sprintf("用时：%.2f分钟\n", time.Since(startTime).Minutes()))
 	lg.InfoToFileAndStdOut("已完成处理！")
+
 }

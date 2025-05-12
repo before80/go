@@ -107,17 +107,41 @@ function replaceRemarkToOriginPlace() {
 
 // 去除代码块中 右上角的 >>>
 function removeCopyButton() {
-    document.querySelectorAll("span.copybutton").forEach(sp => {
+    document.querySelectorAll("span.copybutton,button.copybutton").forEach(sp => {
         sp.remove()
     })
 }
 
-// 去除标题中固定链接（即一个悬浮图标）
-function removeFixedHeaderLink() {
-    document.querySelectorAll(".headerlink").forEach(a => {
-        a.remove()
+function removeNavContent() {
+    document.querySelectorAll("nav.nav-content").forEach(nav => {
+        nav.remove()
     })
 }
+
+function removeMenuWrapper() {
+    document.querySelectorAll(".menu-wrapper").forEach(div => {
+        div.remove()
+    })
+}
+
+function removeTocTree() {
+    const tocTree = document.querySelector("div.toctree-wrapper.compound")
+    if (tocTree) {
+        tocTree.remove()
+    }
+
+    const navContents = document.querySelector("nav.contents")
+    if (navContents) {
+        navContents.remove()
+    }
+}
+
+// 去除标题中固定链接（即一个悬浮图标）
+// function removeFixedHeaderLink() {
+//     document.querySelectorAll(".headerlink").forEach(a => {
+//         a.remove()
+//     })
+// }
 
 // 增加添加标题的锚
 function addHeaderAnchorAndRemoveHeaderLink() {
@@ -435,15 +459,31 @@ function replaceP() {
     });
 }
 
-function removeTocTree() {
-    const tocTree = document.querySelector("div.toctree-wrapper.compound")
-    if (tocTree) {
-        tocTree.remove()
+
+
+function replaceHighlightPreCode() {
+    // translated highlight-python3 notranslate
+    // translated highlight-c notranslate
+    const py3pres = document.querySelectorAll("div.highlight-python3 > div.highlight > pre,div.highlight-python2 > div.highlight > pre")
+    if (py3pres.length > 0) {
+        py3pres.forEach(pre => {
+            const div = document.createElement("div")
+            const html = `<pre><code class="text-sm text-gray-800 bg-gray-200 p-4 rounded-md language-python">${pre.innerHTML}</code></pre>`;
+            div.insertAdjacentHTML("afterbegin", html)
+            pre.insertAdjacentElement("afterend", div)
+            pre.remove()
+        })
     }
 
-    const navContents = document.querySelector("nav.contents")
-    if (navContents) {
-        navContents.remove()
+    const cPres = document.querySelectorAll("div.highlight-c > div.highlight > pre")
+    if (cPres.length > 0) {
+        cPres.forEach(pre => {
+            const div = document.createElement("div")
+            const html = `<pre><code class="text-sm text-gray-800 bg-gray-200 p-4 rounded-md language-c">${pre.innerHTML}</code></pre>`;
+            div.insertAdjacentHTML("afterbegin", html)
+            pre.insertAdjacentElement("afterend", div)
+            pre.remove()
+        })
     }
 }
 
@@ -451,12 +491,14 @@ removeRelated()
 removeFooter();
 removeH1();
 removeSphinxsidebar();
+removeCopyButton();
+removeNavContent();
+removeMenuWrapper();
 replaceEm();
 replaceEmStableabi();
 // replaceCode();
 replaceDivIntoBlockQuote();
 replaceRemarkToOriginPlace();
-removeCopyButton();
 replaceDlGlossary();
 addHeaderAnchorAndRemoveHeaderLink();
 replaceIntoBlockquote();
@@ -465,3 +507,4 @@ replaceDlPyC();
 replaceDlFieldList();
 replaceP();
 removeTocTree()
+replaceHighlightPreCode();

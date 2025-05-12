@@ -212,7 +212,7 @@ draft = false
 
 	if len(subMenuInfos) > 0 {
 		// 将 subMenuInfos 推入
-		pydNext.ReversePushWaitDealMenuInfoToStack(subMenuInfos)
+		pydNext.PushWaitDealMenuInfoToStack(subMenuInfos)
 	}
 	goto LabelForContinue
 }
