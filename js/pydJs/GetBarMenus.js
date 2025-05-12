@@ -12,13 +12,14 @@
             ps.forEach(p => {
                 const a = p.querySelector('a')
                 const menu_name = a.textContent.trim().replace(/[\"\'\/\\]/g,'')
-                const url = a.href.trim()
+                const urls = a.href.trim().split("#")
+                const url = urls[0]
                 let filename = url.replace(baseUrl, '')
                     .replace(/\/index\.html$/, '')
                     .replace(/\.html$/, '')
                     .replace(/[\.\/]/g, '_')
 
-                if (!exists[url]) {
+                if (!exists[url] && filename === "howto") {
                     if (i === 0 || (i > 0 && ["术语对照表", "Python 的历史与许可证"].includes(menu_name))) {
                         menuInfos.push({
                             menu_name: menu_name,

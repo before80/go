@@ -7,7 +7,8 @@
         uls.querySelectorAll(":scope > li").forEach((li, i) => {
             const a = li.querySelector('a')
             const menu_name = a.textContent.trim().replace(/[\"\'\/\\]/g,'')
-            const url = a.href.trim()
+            const urls = a.href.trim().split("#")
+            const url = urls[0]
             const names = url.split('/')
             let filename = names[names.length - 1].replace(/\.html$/, '')
                 .replace(/[\.\/]/g, '_')
