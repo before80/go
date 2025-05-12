@@ -1,5 +1,6 @@
 () => {
     const curPageUrl = "%s"
+    // const curPageUrl = "https://docs.python.org/zh-cn/3.13/index.html"
     let baseUrl = curPageUrl.replace(/\/index\.html$/, '');
     baseUrl = baseUrl.replace(/\/$/, '');
     baseUrl = baseUrl + '/'
@@ -21,7 +22,11 @@
                     if (i === 0 || (i > 0 && ["术语对照表", "Python 的历史与许可证"].includes(menu_name))) {
                         menuInfos.push({
                             menu_name: menu_name,
+                            top_menu_name: menu_name,
+                            is_top_menu: 1,
                             filename: filename,
+                            weight: (i + 1) * 10,
+                            dir: filename,
                             url: url,
                         })
                         exists[url] = true

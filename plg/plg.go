@@ -3,10 +3,10 @@ package plg
 import (
 	"fmt"
 	"github.com/before80/go/lg"
-	"github.com/before80/go/pg/pydPg"
+	"github.com/before80/go/next/pydNext"
 )
 
-func getStr(menuInfos []pydPg.MenuInfo) string {
+func getStr(menuInfos []pydNext.MenuInfo) string {
 	str := ""
 	curUrl := ""
 	for i, menuInfo := range menuInfos {
@@ -29,7 +29,7 @@ func getStr(menuInfos []pydPg.MenuInfo) string {
 	return str
 }
 
-func InfoToFileAndStdOut(process, step string, menuInfos ...pydPg.MenuInfo) {
+func InfoToFileAndStdOut(process, step string, menuInfos ...pydNext.MenuInfo) {
 	str := getStr(menuInfos)
 	lg.InfoToFileAndStdOut(fmt.Sprintf("%s%s->%s\n", process, step, str))
 }

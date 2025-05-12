@@ -28,6 +28,11 @@ func ReplaceMarkdownFileContent(filePath string) (bool, error) {
 		{regexp.MustCompile("```\\s*?\nparrot"), "```python\nparrot"},
 		{regexp.MustCompile("```\\s*?\ncheeseshop"), "```python\ncheeseshop"},
 		{regexp.MustCompile("```\\s*?\n\\$"), "```sh\n$"},
+		{regexp.MustCompile("-3\\*\\*2"), "`-3**2`"},
+		{regexp.MustCompile(`-\(3\\*\\*2\)`), "`-(3**2)`"},
+		{regexp.MustCompile(`\(-3\)\\*\\*2`), "`(-3)**2`"},
+		{regexp.MustCompile(`转义成 \\'`), "转义成 `\\'`"},
+		{regexp.MustCompile(`备注\[1\]：\*\* 比"`), "备注[1]：`**` 比"},
 		{regexp.MustCompile("&zeroWidthSpace;"), "​\t"},
 	}
 

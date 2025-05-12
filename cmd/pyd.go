@@ -19,11 +19,13 @@ Cobra is a CLI library for Go that empowers applications.
 This application is a tool to generate the needed files
 to quickly create a Cobra application.`,
 	Run: func(cmd *cobra.Command, args []string) {
-		pydEntrance.Do()
+		pydEntrance.Do(cmd)
 	},
 }
 
 func init() {
+	pydCmd.Flags().IntP("thread-num", "t", 3, "输入线程数")
+
 	rootCmd.AddCommand(pydCmd)
 
 	// Here you will define your flags and configuration settings.

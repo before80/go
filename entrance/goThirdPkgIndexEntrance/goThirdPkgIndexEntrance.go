@@ -44,7 +44,7 @@ func Do(cmd *cobra.Command) {
 	var wg sync.WaitGroup
 	for i := 0; i < threadNum; i++ {
 		wg.Add(1)
-		go goThirdPkgIndexPg.DealWithPkgBaseInfo(i, &wg)
+		go goThirdPkgIndexPg.DealWithPkgPageData(i, &wg)
 	}
 	wg.Wait()
 
