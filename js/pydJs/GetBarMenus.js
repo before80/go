@@ -19,7 +19,7 @@
                     .replace(/\.html$/, '')
                     .replace(/[\.\/]/g, '_')
 
-                if (!exists[url] && filename === "howto") {
+                if (!exists[url]) {
                     if (i === 0 || (i > 0 && ["术语对照表", "Python 的历史与许可证"].includes(menu_name))) {
                         menuInfos.push({
                             menu_name: menu_name,
