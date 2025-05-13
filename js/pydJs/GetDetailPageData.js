@@ -464,7 +464,7 @@ function replaceP() {
 function replaceHighlightPreCode() {
     // translated highlight-python3 notranslate
     // translated highlight-c notranslate
-    const py3pres = document.querySelectorAll("div.highlight-python3 > div.highlight > pre,div.highlight-python2 > div.highlight > pre")
+    const py3pres = document.querySelectorAll("div.highlight-pycon > div.highlight > pre,div.highlight-python3 > div.highlight > pre,div.highlight-python2 > div.highlight > pre")
     if (py3pres.length > 0) {
         py3pres.forEach(pre => {
             const div = document.createElement("div")
@@ -480,6 +480,17 @@ function replaceHighlightPreCode() {
         cPres.forEach(pre => {
             const div = document.createElement("div")
             const html = `<pre><code class="text-sm text-gray-800 bg-gray-200 p-4 rounded-md language-c">${pre.innerHTML}</code></pre>`;
+            div.insertAdjacentHTML("afterbegin", html)
+            pre.insertAdjacentElement("afterend", div)
+            pre.remove()
+        })
+    }
+
+    const shPres = document.querySelectorAll("div.highlight-sh > div.highlight > pre")
+    if (shPres.length > 0) {
+        shPres.forEach(pre => {
+            const div = document.createElement("div")
+            const html = `<pre><code class="text-sm text-gray-800 bg-gray-200 p-4 rounded-md language-sh">${pre.innerHTML}</code></pre>`;
             div.insertAdjacentHTML("afterbegin", html)
             pre.insertAdjacentElement("afterend", div)
             pre.remove()

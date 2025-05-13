@@ -7,11 +7,14 @@ import (
 	"github.com/before80/go/next/pydNext"
 	"github.com/before80/go/pg/pydPg"
 	"github.com/before80/go/plg"
+	"github.com/before80/go/tr"
+	"github.com/before80/go/wind"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/defaults"
 	"github.com/go-vgo/robotgo"
 	"github.com/spf13/cobra"
 	"github.com/tailscale/win"
+	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -218,8 +221,15 @@ func Do(cmd *cobra.Command) {
 				}
 			}
 		}
+		uniqueMdFilename := "do" + strconv.Itoa(j) + ".md"
+		relUniqueMdFilePath := filepath.Join("markdown", uniqueMdFilename)
+		absUniqueMdFilePath, _ := filepath.Abs(relUniqueMdFilePath)
+		_ = tr.TruncFileContent(relUniqueMdFilePath)
+		_ = wind.OpenTypora(absUniqueMdFilePath)
+		time.Sleep(2 * time.Second)
 		bs.MyBrowserSlice[j] = bs.MyBrowser{Browser: browser1, Ok: true, Index: j}
 	}
+
 	var wg sync.WaitGroup
 	for i := 0; i < threadNum; i++ {
 		wg.Add(1)

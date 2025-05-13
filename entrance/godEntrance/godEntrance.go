@@ -4,15 +4,23 @@ import (
 	"fmt"
 	"github.com/before80/go/bs"
 	"github.com/before80/go/lg"
+	"github.com/before80/go/next/godNext"
 	"github.com/before80/go/pg/godPg"
+	"github.com/before80/go/tr"
+	"github.com/before80/go/wind"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/defaults"
-	"github.com/go-vgo/robotgo"
-	"github.com/tailscale/win"
+	"github.com/spf13/cobra"
+	"path/filepath"
 	"strconv"
+	"sync"
+	"time"
 )
 
-func Do() {
+func Do(cmd *cobra.Command) {
+	startTime := time.Now()
+	lg.InfoToFileAndStdOut(fmt.Sprintf("开始时间：%v\n", startTime))
+
 	var err error
 	defer func() {
 		if err != nil {
@@ -20,47 +28,54 @@ func Do() {
 		}
 	}()
 	defaults.ResetWith("show=true")
-	_ = err
 	var browser *rod.Browser
 	var page *rod.Page
-	var browserHwnd win.HWND
-	_ = browserHwnd
-
 	// 打开浏览器
 	browser, err = bs.GetBrowser(strconv.Itoa(0))
 	defer browser.MustClose()
 	// 创建新页面
 	page = browser.MustPage()
-	//page.MustNavigate("https://pkg.go.dev/archive/tar@go1.24.2")
-	//page.MustWaitLoad()
-	//
-	//time.Sleep(2000 * time.Second)
-
-	browserHwnd = robotgo.GetHWND()
-	var stdPkgMenuInfos []godPg.MenuInfo
-	stdPkgMenuInfos, err = godPg.GetAllStdPkgInfo(page, "https://pkg.go.dev/std")
-	//fmt.Println(stdPkgMenuInfos)
-
-	for _, stdPkgMenuInfo := range stdPkgMenuInfos {
-		err = godPg.InitStdPkgMdFile(stdPkgMenuInfo)
-		if err != nil {
-			lg.ErrorToFileAndStdOutWithSleepSecond(fmt.Sprintf("%v", err), 3)
-			return
-		}
-		lg.InfoToFileAndStdOut(fmt.Sprintf("初始化完成%s-%s\n", stdPkgMenuInfo.Filename, stdPkgMenuInfo.Url))
-
-		if stdPkgMenuInfo.Url == "" {
-			continue
-		}
-		lg.InfoToFileAndStdOut(fmt.Sprintf("准备插入数据%s-%s\n", stdPkgMenuInfo.Filename, stdPkgMenuInfo.Url))
-
-		err = godPg.InsertPkgDetailPageData(browserHwnd, stdPkgMenuInfo, page)
-		if err != nil {
-			lg.ErrorToFileAndStdOutWithSleepSecond(fmt.Sprintf("%v", err), 3)
-			return
-		}
-		lg.InfoToFileAndStdOut(fmt.Sprintf("插入数据完成%s-%s\n", stdPkgMenuInfo.Filename, stdPkgMenuInfo.Url))
-	}
-	lg.InfoToFileAndStdOut("已全部完成\n")
+	var menuInfos []godNext.MenuInfo
+	menuInfos, err = godPg.GetAllStdPkgInfo(page, "https://pkg.go.dev/std")
+	godNext.PushWaitDealMenuInfoToStack(menuInfos)
 	_ = browser.Close()
+	//fmt.Println("thirdPkgBaseInfos")
+	threadNum, err := cmd.Flags().GetInt("thread-num")
+	if err != nil {
+		lg.InfoToFileAndStdOut(fmt.Sprintf("获取线程数标志时出错：%v\n", err))
+		return
+	}
+
+	bs.MyBrowserSlice = make([]bs.MyBrowser, threadNum)
+	// 实例化多个 *rod.Browser 实例
+	for j := 0; j < threadNum; j++ {
+		browser1, err1 := bs.GetBrowser(strconv.Itoa(j))
+		if err1 != nil {
+			if len(bs.MyBrowserSlice) > 0 {
+				for _, mb := range bs.MyBrowserSlice {
+					if mb.Browser != nil {
+						_ = mb.Browser.Close()
+					}
+				}
+			}
+		}
+		uniqueMdFilename := "do" + strconv.Itoa(j) + ".md"
+		relUniqueMdFilePath := filepath.Join("markdown", uniqueMdFilename)
+		absUniqueMdFilePath, _ := filepath.Abs(relUniqueMdFilePath)
+		_ = tr.TruncFileContent(relUniqueMdFilePath)
+		_ = wind.OpenTypora(absUniqueMdFilePath)
+		time.Sleep(2 * time.Second)
+		bs.MyBrowserSlice[j] = bs.MyBrowser{Browser: browser1, Ok: true, Index: j}
+	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < threadNum; i++ {
+		wg.Add(1)
+		go godPg.DealWithMenuPageData(i, &wg)
+	}
+	wg.Wait()
+	lg.InfoToFileAndStdOut(fmt.Sprintf("结束时间：%v\n", time.Now()))
+	lg.InfoToFileAndStdOut(fmt.Sprintf("用时：%.2f分钟\n", time.Since(startTime).Minutes()))
+	lg.InfoToFileAndStdOut("已完成处理！")
+
 }

@@ -7,7 +7,6 @@ import (
 	"github.com/before80/go/bs"
 	"github.com/before80/go/cfg"
 	"github.com/before80/go/contants"
-	"github.com/before80/go/js/goThirdPkgJs"
 	"github.com/before80/go/js/pydJs"
 	"github.com/before80/go/lg"
 	"github.com/before80/go/next/pydNext"
@@ -198,10 +197,8 @@ draft = false
 	pageTitle = result.Value.String()
 	chromePageWindowTitle = pageTitle + " - Google Chrome"
 
-	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, goThirdPkgJs.ReplaceJs))
-	if err != nil {
-		panic(fmt.Errorf("线程%d在网页%s中执行goThirdPkgJs.ReplaceJs遇到错误：%v", threadIndex, curMenu.Url, err))
-	}
+	// 再次清空
+	_ = tr.TruncFileContent(relUniqueMdFilePath)
 
 	_ = DoCopyAndPaste(threadIndex, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle, curMenu.Url)
 
@@ -230,7 +227,7 @@ func DoCopyAndPaste(threadIndex int, absUniqueMdFilePath, typoraWindowTitle, chr
 	var typoraHwnd win.HWND
 	browserHwnd := robotgo.FindWindow(chromePageWindowTitle)
 
-	_ = wind.OpenTypora(absUniqueMdFilePath)
+	//_ = wind.OpenTypora(absUniqueMdFilePath)
 	timeoutChan := time.After(10 * time.Second)
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
@@ -259,8 +256,9 @@ LabelForContinue:
 		lg.ErrorToFile(fmt.Sprintf("在浏览器中进行复制遇到错误：%v\n", err1))
 	}
 	_ = wind.DoCtrlVAndS(typoraHwnd, contentBytes)
-	_ = win.SendMessage(typoraHwnd, win.WM_CLOSE, 0, 0)
-	time.Sleep(time.Duration(cfg.Default.WaitTyporaCloseSeconds) * time.Second)
+	//_ = win.SendMessage(typoraHwnd, win.WM_CLOSE, 0, 0)
+	_ = win.SendMessage(typoraHwnd, win.WM_SYSCOMMAND, win.SC_MINIMIZE, 0)
+	//time.Sleep(time.Duration(cfg.Default.WaitTyporaCloseSeconds) * time.Second)
 	return nil
 }
 

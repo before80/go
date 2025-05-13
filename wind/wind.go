@@ -146,8 +146,8 @@ func DoCtrlVAndS(tempHwnd win.HWND, contentBytes int) error {
 	if err := w32.SetForegroundWindow(hwnd); err != nil {
 		return fmt.Errorf("SetForegroundWindow failed")
 	}
-	time.Sleep(50 * time.Millisecond) // 增加延迟
-
+	time.Sleep(250 * time.Millisecond) // 增加延迟
+	//time.Sleep(5 * time.Second)
 	//// 定位内容区域
 	//contentHwnd := FindChromeBrowserContentWindow(hwnd)
 	//fmt.Printf("contentHwnd=%v\n", contentHwnd)
@@ -184,7 +184,7 @@ func DoCtrlVAndS(tempHwnd win.HWND, contentBytes int) error {
 	pressCtrlAndKey(VK_V)
 	lg.InfoToFileAndStdOut(fmt.Sprintf("contentBytes=%d\n", contentBytes))
 	if contentBytes > 10000 {
-		time.Sleep(time.Duration(int(math.Ceil(float64(contentBytes)/5000))*300) * time.Millisecond)
+		time.Sleep(time.Duration(int(math.Ceil(float64(contentBytes)/5000))*200) * time.Millisecond)
 	} else {
 		time.Sleep(time.Duration(int(math.Ceil(float64(contentBytes)/5000))*100) * time.Millisecond)
 	}
@@ -197,12 +197,12 @@ func DoCtrlVAndS(tempHwnd win.HWND, contentBytes int) error {
 
 func waitForClipboard() (int, error) {
 	start := time.Now()
-	for time.Since(start) < 10*time.Second {
+	for time.Since(start) < 6*time.Second {
 		if v, err := clipboard.ReadAll(); err == nil {
 			//fmt.Printf("等待%v后获取到剪贴板的值:%v\n", time.Since(start), v)
 			return len(v), nil
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(80 * time.Millisecond)
 	}
 	return 0, fmt.Errorf("剪贴板超时")
 }

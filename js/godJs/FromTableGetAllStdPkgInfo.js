@@ -25,7 +25,7 @@
         let filename = ""
         let url = ""
         const td1 = tr.querySelector(":scope > td:first-child")
-        let isTop = 2
+        let isTopMenu = 2
         if (td1) {
             const div1 = td1.querySelector(":scope > div:first-child")
             if (div1) {
@@ -42,14 +42,14 @@
                         filename = menuName.replace(/[\/\s]/g, '_')
                         url = td1.querySelector("a").href.trim()
                         curTopFilename = filename
-                        isTop = 1
+                        isTopMenu = 1
                     } else {
                         if (td1.querySelector("span")) {
                             menuName = td1.querySelector("span").textContent.trim()
                             filename = menuName.replace(/[\/\s]/g, '_')
                             url = ""
                             curTopFilename = filename
-                            isTop = 1
+                            isTopMenu = 1
                         }
                     }
                 }
@@ -60,7 +60,7 @@
             desc = td2.textContent.trim()
         }
         if (filename) {
-            if (isTop === 1) {
+            if (isTopMenu === 1) {
                 subMenuIndex = 0
                 if (topMenuIndex === 0) {
                     topMenuIndex++
@@ -70,8 +70,8 @@
                     filename: filename,
                     url: url,
                     desc: desc,
-                    is_top: isTop,
-                    index: topMenuIndex,
+                    is_top: isTopMenu,
+                    weight: topMenuIndex,
                     p_filename: "",
                     children: [],
                 })
@@ -81,8 +81,8 @@
                     filename: filename,
                     url: url,
                     desc: desc,
-                    is_top: isTop,
-                    index: subMenuIndex,
+                    is_top_menu: isTopMenu,
+                    weight: subMenuIndex,
                     p_filename: curTopFilename,
                     children: [],
                 })
