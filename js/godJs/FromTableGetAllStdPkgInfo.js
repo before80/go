@@ -59,7 +59,7 @@
         if (td2) {
             desc = td2.textContent.trim()
         }
-        if (filename) {
+        if (filename && !(filename.startsWith("internal") || filename.indexOf("internal") != -1)) {
             if (isTopMenu === 1) {
                 subMenuIndex = 0
                 if (topMenuIndex === 0) {
@@ -70,7 +70,7 @@
                     filename: filename,
                     url: url,
                     desc: desc,
-                    is_top: isTopMenu,
+                    is_top_menu: isTopMenu,
                     weight: topMenuIndex,
                     p_filename: "",
                     children: [],

@@ -79,6 +79,7 @@ func DealWithMenuPageData(threadIndex int, wg *sync.WaitGroup) {
 	var pageTitle, chromePageWindowTitle string
 	var fpDst string
 	var result *proto.RuntimeRemoteObject
+	articleUrl := ""
 	uniqueMdFilename := "do" + strconv.Itoa(threadIndex) + ".md"
 	relUniqueMdFilePath := filepath.Join("markdown", uniqueMdFilename)
 	typoraWindowTitle := uniqueMdFilename + " - Typora"
@@ -97,7 +98,11 @@ LabelForContinue:
 		}
 		return
 	}
-
+	if curMenu.Url == "" {
+		articleUrl = ""
+	} else {
+		articleUrl = fmt.Sprintf(`[%s](%s)`, curMenu.Url, curMenu.Url)
+	}
 	page.MustNavigate(curMenu.Url)
 	page.MustWaitLoad()
 
@@ -119,6 +124,7 @@ LabelForContinue:
 	_ = hadExist
 	mdF, _ := os.OpenFile(fpDst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
 	if curMenu.IsTopMenu == 1 {
+
 		_, _ = mdF.WriteString(fmt.Sprintf(`+++
 title = "%s"
 linkTitle = "%s"
@@ -132,10 +138,10 @@ draft = false
 
 +++
 
-> 原文：[%s](%s)
+> 原文：%s
 >
 > 收录时间：%s
-`, curMenu.MenuName, curMenu.MenuName, date, curMenu.Desc, curMenu.Weight, curMenu.Url, curMenu.Url, fmt.Sprintf("`%s`", date)))
+`, curMenu.MenuName, curMenu.MenuName, date, curMenu.Desc, curMenu.Weight, articleUrl, fmt.Sprintf("`%s`", date)))
 	} else {
 		_, _ = mdF.WriteString(fmt.Sprintf(`+++
 title = "%s"
@@ -148,10 +154,10 @@ draft = false
 
 +++
 
-> 原文：[%s](%s)
+> 原文：%s
 >
 > 收录时间：%s
-`, curMenu.MenuName, date, curMenu.Weight, curMenu.Desc, curMenu.Url, curMenu.Url, fmt.Sprintf("`%s`", date)))
+`, curMenu.MenuName, date, curMenu.Weight, curMenu.Desc, articleUrl, fmt.Sprintf("`%s`", date)))
 	}
 
 	_ = mdF.Close()
