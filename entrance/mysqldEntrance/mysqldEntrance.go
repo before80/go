@@ -5,7 +5,7 @@ import (
 	"github.com/before80/go/bs"
 	"github.com/before80/go/lg"
 	"github.com/before80/go/pg/mysqldPg"
-	"github.com/before80/go/pg/phpPg"
+	"github.com/before80/go/pg/phpdPg"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/defaults"
 	"github.com/go-vgo/robotgo"
@@ -14,7 +14,7 @@ import (
 )
 
 func Do() {
-	defer phpPg.CloseInitFiles()
+	defer phpdPg.CloseInitFiles()
 	var err error
 	defer func() {
 		if err != nil {

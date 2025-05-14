@@ -1,4 +1,4 @@
-package pydNext
+package phpdNext
 
 import (
 	"fmt"
@@ -10,14 +10,13 @@ import (
 )
 
 type MenuInfo struct {
-	MenuName    string `json:"menu_name"`
-	IsTopMenu   int    `json:"is_top_menu"`
-	TopMenuName string `json:"top_menu_name"`
-	Filename    string `json:"filename"`
-	Url         string `json:"url"`
-	Dir         string `json:"dir"`
-	Weight      int    `json:"weight"`
-	Desc        string `json:"desc"`
+	MenuName  string `json:"menu_name"`
+	IsTopMenu int    `json:"is_top_menu"`
+	Filename  string `json:"filename"`
+	Url       string `json:"url"`
+	Dir       string `json:"dir"`
+	Weight    int    `json:"weight"`
+	Retry     int    `json:"retry"`
 }
 
 var forMenuInfoQueueLock sync.Mutex

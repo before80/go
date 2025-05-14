@@ -138,6 +138,49 @@ func InChromePageDoCtrlAAndC(tempHwnd win.HWND) (contentByes int, err error) {
 	return contentByes, nil
 }
 
+var copyPasteLock sync.Mutex
+
+func DoCopyAndPaste(threadIndex int, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle, url string) (contentBytes int, err error) {
+	copyPasteLock.Lock()
+	defer copyPasteLock.Unlock()
+	var typoraHwnd win.HWND
+	browserHwnd := robotgo.FindWindow(chromePageWindowTitle)
+
+	//_ = OpenTypora(absUniqueMdFilePath)
+	timeoutChan := time.After(10 * time.Second)
+	ticker := time.NewTicker(500 * time.Millisecond)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			// 每隔 interval 时间检查一次条件
+			hwnd1 := robotgo.FindWindow(typoraWindowTitle)
+			lg.InfoToFile(fmt.Sprintf("%d - typoraHwnd=%v\n", threadIndex, hwnd1))
+			if hwnd1 != 0 {
+				typoraHwnd = hwnd1
+				goto LabelForContinue
+			}
+			//hwnd1, err1 = wind.FindWindowByTitle(uniqueMdFilename + " - Typora")
+		case <-timeoutChan:
+			// 超时后退出循环
+			goto LabelForContinue
+		}
+	}
+LabelForContinue:
+	lg.InfoToFile(fmt.Sprintf("线程%d中获取到的typoraHwnd=%v\n", threadIndex, typoraHwnd))
+	var err1 error
+	contentBytes, err1 = InChromePageDoCtrlAAndC(browserHwnd)
+	lg.InfoToFile(fmt.Sprintf("在页面%s获取到的字节数为：%d\n", url, contentBytes))
+	if err1 != nil {
+		lg.ErrorToFile(fmt.Sprintf("在浏览器中进行复制遇到错误：%v\n", err1))
+	}
+	_ = DoCtrlVAndS(typoraHwnd, contentBytes)
+	//_ = win.SendMessage(typoraHwnd, win.WM_CLOSE, 0, 0)
+	_ = win.SendMessage(typoraHwnd, win.WM_SYSCOMMAND, win.SC_MINIMIZE, 0)
+	//time.Sleep(time.Duration(cfg.Default.WaitTyporaCloseSeconds) * time.Second)
+	return contentBytes, nil
+}
+
 func DoCtrlVAndS(tempHwnd win.HWND, contentBytes int) error {
 	hwnd := w32.HWND(tempHwnd)
 

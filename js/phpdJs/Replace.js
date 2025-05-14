@@ -82,6 +82,11 @@ function removeSomething() {
             // layout.insertAdjacentText("afterbegin","无内容")
         }
     }
+
+    const headsup = document.querySelector("div.headsup")
+    if (headsup) {
+        headsup.remove();
+    }
 }
 
 

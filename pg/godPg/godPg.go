@@ -2,10 +2,8 @@ package godPg
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/before80/go/bs"
-	"github.com/before80/go/cfg"
 	"github.com/before80/go/contants"
 	"github.com/before80/go/js/godJs"
 	"github.com/before80/go/lg"
@@ -15,12 +13,10 @@ import (
 	"github.com/before80/go/wind"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/proto"
-	"github.com/go-vgo/robotgo"
-	"github.com/tailscale/win"
-	"io/fs"
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -80,6 +76,7 @@ func DealWithMenuPageData(threadIndex int, wg *sync.WaitGroup) {
 	var fpDst string
 	var result *proto.RuntimeRemoteObject
 	articleUrl := ""
+	desc := ""
 	uniqueMdFilename := "do" + strconv.Itoa(threadIndex) + ".md"
 	relUniqueMdFilePath := filepath.Join("markdown", uniqueMdFilename)
 	typoraWindowTitle := uniqueMdFilename + " - Typora"
@@ -88,7 +85,7 @@ func DealWithMenuPageData(threadIndex int, wg *sync.WaitGroup) {
 LabelForContinue:
 	_ = tr.TruncFileContent(relUniqueMdFilePath)
 	date := time.Now().Format(time.RFC3339)
-	curMenu, isEnd := godNext.GetNextMenuInfoFromStack()
+	curMenu, isEnd := godNext.GetNextMenuInfoFromQueue()
 	lg.InfoToFile(fmt.Sprintf("线程%d正要处理的menu=%v\n", threadIndex, curMenu))
 	if isEnd {
 		if !hadWgDone {
@@ -103,6 +100,8 @@ LabelForContinue:
 	} else {
 		articleUrl = fmt.Sprintf(`[%s](%s)`, curMenu.Url, curMenu.Url)
 	}
+	desc = strings.ReplaceAll(curMenu.Desc, "\"", "'")
+	desc = strings.ReplaceAll(desc, "\n", " ")
 	page.MustNavigate(curMenu.Url)
 	page.MustWaitLoad()
 
@@ -157,7 +156,7 @@ draft = false
 > 原文：%s
 >
 > 收录时间：%s
-`, curMenu.MenuName, date, curMenu.Weight, curMenu.Desc, articleUrl, fmt.Sprintf("`%s`", date)))
+`, curMenu.MenuName, date, curMenu.Weight, desc, articleUrl, fmt.Sprintf("`%s`", date)))
 	}
 
 	_ = mdF.Close()
@@ -174,217 +173,17 @@ draft = false
 	// 再次清空
 	_ = tr.TruncFileContent(relUniqueMdFilePath)
 
-	_ = DoCopyAndPaste(threadIndex, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle, curMenu.Url)
-
-	lg.InfoToFile(fmt.Sprintf("线程%d正要处理Insert", threadIndex))
-	err = pg.InsertAnyPageData(fpDst, relUniqueMdFilePath, "> 收录时间：")
-	if err != nil {
-		panic(fmt.Errorf("线程%d在将网页%s中的内容插入到目标md文件时遇到错误：%v", threadIndex, curMenu.Url, err))
+	contentBytes, _ := wind.DoCopyAndPaste(threadIndex, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle, curMenu.Url)
+	if contentBytes == 0 {
+		lg.InfoToFile(fmt.Sprintf("线程%d发现复制网页%s的字节数为0，将加入到下一次进行重试", threadIndex, curMenu.Url))
+		godNext.PushWaitDealMenuInfoToQueue([]godNext.MenuInfo{curMenu})
+	} else {
+		lg.InfoToFile(fmt.Sprintf("线程%d正要处理Insert", threadIndex))
+		err = pg.InsertAnyPageData(fpDst, relUniqueMdFilePath, "> 收录时间：")
+		if err != nil {
+			panic(fmt.Errorf("线程%d在将网页%s中的内容插入到目标md文件时遇到错误：%v", threadIndex, curMenu.Url, err))
+		}
 	}
 
 	goto LabelForContinue
-}
-
-var copyPasteLock sync.Mutex
-
-func DoCopyAndPaste(threadIndex int, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle, url string) (err error) {
-	copyPasteLock.Lock()
-	defer copyPasteLock.Unlock()
-	var typoraHwnd win.HWND
-	browserHwnd := robotgo.FindWindow(chromePageWindowTitle)
-
-	//_ = wind.OpenTypora(absUniqueMdFilePath)
-	timeoutChan := time.After(10 * time.Second)
-	ticker := time.NewTicker(500 * time.Millisecond)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			// 每隔 interval 时间检查一次条件
-			hwnd1 := robotgo.FindWindow(typoraWindowTitle)
-			lg.InfoToFile(fmt.Sprintf("%d - typoraHwnd=%v\n", threadIndex, hwnd1))
-			if hwnd1 != 0 {
-				typoraHwnd = hwnd1
-				goto LabelForContinue
-			}
-			//hwnd1, err1 = wind.FindWindowByTitle(uniqueMdFilename + " - Typora")
-		case <-timeoutChan:
-			// 超时后退出循环
-			goto LabelForContinue
-		}
-	}
-LabelForContinue:
-	lg.InfoToFile(fmt.Sprintf("线程%d中获取到的typoraHwnd=%v\n", threadIndex, typoraHwnd))
-
-	contentBytes, err1 := wind.InChromePageDoCtrlAAndC(browserHwnd)
-	lg.InfoToFile(fmt.Sprintf("在页面%s获取到的字节数为：%d\n", url, contentBytes))
-	if err1 != nil {
-		lg.ErrorToFile(fmt.Sprintf("在浏览器中进行复制遇到错误：%v\n", err1))
-	}
-	_ = wind.DoCtrlVAndS(typoraHwnd, contentBytes)
-	//_ = win.SendMessage(typoraHwnd, win.WM_CLOSE, 0, 0)
-	_ = win.SendMessage(typoraHwnd, win.WM_SYSCOMMAND, win.SC_MINIMIZE, 0)
-	//time.Sleep(time.Duration(cfg.Default.WaitTyporaCloseSeconds) * time.Second)
-	return nil
-}
-
-type MenuInfo struct {
-	MenuName             string   `json:"menu_name"`
-	Filename             string   `json:"filename"`
-	Url                  string   `json:"url"`
-	Desc                 string   `json:"desc"`
-	IsTop                int      `json:"is_top"`
-	Index                int      `json:"index"`
-	PFilename            string   `json:"p_filename"`
-	ChildrenMenuFilename []string `json:"children"`
-}
-
-// GetAllStdPkgInfo0 获取所有标准库的pkg信息
-func GetAllStdPkgInfo0(page *rod.Page, url string) (stdPkgMenuInfos []MenuInfo, err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("获取allStdPkgInfo时遇到错误：%v", r)
-		}
-	}()
-
-	page.MustNavigate(url)
-	page.MustWaitLoad()
-
-	var result *proto.RuntimeRemoteObject
-	result, err = page.Eval(godJs.FromTableGetAllStdPkgInfoJs)
-	if err != nil {
-		return nil, fmt.Errorf("在网页%s中执行GetBarMenusJs遇到错误：%v", url, err)
-	}
-
-	// 将结果序列化为 JSON 字节
-	jsonBytes, err := json.Marshal(result.Value)
-	if err != nil {
-		return nil, fmt.Errorf("在网页%s中执行json.Marshal遇到错误: %v", url, err)
-	}
-
-	// 将 JSON 数据反序列化到结构体中
-	err = json.Unmarshal(jsonBytes, &stdPkgMenuInfos)
-	if err != nil {
-		return nil, fmt.Errorf("在网页%s中执行json.Unmarshal遇到错误: %v", url, err)
-	}
-	return
-}
-
-func InitStdPkgMdFile(pkgMenu MenuInfo) (err error) {
-	var dir string
-	//isBar := false
-	useUnderlineIndexMd := false
-	baseDirname := "go_std_pkg"
-	if pkgMenu.IsTop == 1 {
-		if len(pkgMenu.ChildrenMenuFilename) > 0 {
-			useUnderlineIndexMd = true
-			dir = filepath.Join(contants.OutputFolderName, baseDirname, pkgMenu.Filename)
-		} else {
-			dir = filepath.Join(contants.OutputFolderName, baseDirname)
-		}
-	} else {
-		dir = filepath.Join(contants.OutputFolderName, baseDirname, pkgMenu.PFilename)
-	}
-	return preInitMdFile(false, useUnderlineIndexMd, dir, pkgMenu)
-}
-
-func InsertPkgDetailPageData(browserHwnd win.HWND, pkgMenu MenuInfo, page *rod.Page) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("插入detailPage=%s数据时遇到错误：%v", pkgMenu.Url, r)
-		}
-	}()
-
-	page.MustNavigate(pkgMenu.Url + "?GOOS=windows")
-	page.MustWaitLoad()
-
-	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, godJs.ReplaceJs))
-	if err != nil {
-		return fmt.Errorf("在网页%s中执行godJs.ReplaceJs遇到错误：%v", pkgMenu.Url, err)
-	}
-
-	err = pg.DealUniqueMd(browserHwnd, pkgMenu.Url, "detailPage")
-	if err != nil {
-		return err
-	}
-	var mdFp string
-	baseDirname := "go_std_pkg"
-	if pkgMenu.IsTop == 1 {
-		if len(pkgMenu.ChildrenMenuFilename) > 0 {
-			mdFp = filepath.Join(contants.OutputFolderName, baseDirname, pkgMenu.Filename, "_index.md")
-		} else {
-			mdFp = filepath.Join(contants.OutputFolderName, baseDirname, pkgMenu.Filename+".md")
-		}
-	} else {
-		mdFp = filepath.Join(contants.OutputFolderName, baseDirname, pkgMenu.PFilename, pkgMenu.Filename+".md")
-	}
-	err = pg.InsertAnyPageData(mdFp, cfg.Default.UniqueMdFilepath, "> 收录时间：")
-	return
-}
-
-func preInitMdFile(isBar, useUnderlineIndexMd bool, dir string, menuInfo MenuInfo) (err error) {
-	err = os.MkdirAll(dir, 0777)
-	if err != nil {
-		return fmt.Errorf("无法创建%s目录：%v\n", dir, err)
-	}
-	var filename string
-	if useUnderlineIndexMd {
-		filename = "_index.md"
-	} else {
-		filename = menuInfo.Filename + ".md"
-	}
-
-	mdFp := filepath.Join(dir, filename)
-	var mdF *os.File
-	_, err1 := os.Stat(mdFp)
-
-	// 当文件不存在的情况下，新建文件并初始化该文件
-	if err1 != nil && errors.Is(err1, fs.ErrNotExist) {
-		//fmt.Println("err=", err1)
-		mdF, err = os.OpenFile(mdFp, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
-		if err != nil {
-			return fmt.Errorf("创建文件 %s 时出错: %w", mdFp, err)
-		}
-		defer mdF.Close()
-		date := time.Now().Format(time.RFC3339)
-		if isBar {
-			_, err = mdF.WriteString(fmt.Sprintf(`+++
-title = "%s"
-linkTitle = "%s"
-date = %s
-type = "docs"
-description = "%s"
-isCJKLanguage = true
-draft = false
-[menu.main]
-	weight = %d
-+++
-
-> 原文：[%s](%s)
->
-> 收录时间：%s
-`, menuInfo.MenuName, menuInfo.MenuName, date, "", menuInfo.Index*10, menuInfo.Url, menuInfo.Url, fmt.Sprintf("`%s`", date)))
-		} else {
-			_, err = mdF.WriteString(fmt.Sprintf(`+++
-title = "%s"
-date = %s
-weight = %d
-type = "docs"
-description = "%s"
-isCJKLanguage = true
-draft = false
-
-+++
-
-> 原文：[%s](%s)
->
-> 收录时间：%s
-`, menuInfo.MenuName, date, menuInfo.Index*10, "", menuInfo.Url, menuInfo.Url, fmt.Sprintf("`%s`", date)))
-		}
-
-		if err != nil {
-			return fmt.Errorf("初始化%s文件时出错: %v", mdFp, err)
-		}
-	}
-	return
 }

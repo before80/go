@@ -13,8 +13,10 @@
                 menuInfos.push({
                     menu_name: menuName,
                     filename: filename,
+                    is_top_menu: 1,
+                    dir : "",
                     url: url,
-                    index: i + 1
+                    weight: i + 1
                 })
             }
         })

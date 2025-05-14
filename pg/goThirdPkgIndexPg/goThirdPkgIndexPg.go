@@ -15,8 +15,6 @@ import (
 	"github.com/before80/go/tr"
 	"github.com/before80/go/wind"
 	"github.com/go-rod/rod/lib/proto"
-	"github.com/go-vgo/robotgo"
-	"github.com/tailscale/win"
 	"os"
 	"path/filepath"
 	"slices"
@@ -49,7 +47,7 @@ func DealWithPkgBaseInfo(threadIndex int, wg *sync.WaitGroup) {
 	}()
 LabelForContinue:
 	pkgInfos = nil
-	_, info, isEnd := goThirdPkgIndexNext.GetNextBaseInfoFromStack()
+	_, info, isEnd := goThirdPkgIndexNext.GetNextBaseInfoFromQueue()
 	if isEnd {
 		if !hadWgDone {
 			hadWgDone = true
@@ -131,7 +129,7 @@ func TruncWriteLinesToFile() (err error) {
 	for _, pkgInfos := range sPkgInfos {
 		// 遍历要追加的每一行内容
 		for _, info := range pkgInfos {
-			line := fmt.Sprintf("%s||%s||%s||%s||%d||%d||%s\n", info.Url, info.PkgName, info.Dir, info.Filename, info.NeedPreCreateIndex, info.Weight, info.Desc)
+			line := fmt.Sprintf("%s||%s||%s||%s||%d||%d||%d||%s\n", info.Url, info.PkgName, info.Dir, info.Filename, info.NeedPreCreateIndex, info.Weight, info.PreCreateIndexWeight, info.Desc)
 			// 写入当前行
 			if _, err = writer.WriteString(line); err != nil {
 				return fmt.Errorf("写入行时出错: %w", err)
@@ -168,7 +166,7 @@ func DealWithPkgPageData(threadIndex int, wg *sync.WaitGroup) {
 			}
 		}
 	}()
-	preDir := "go_third_pkg"
+	preDir := cfg.Default.GoThirdPkgPreFolderName
 	browser := bs.MyBrowserSlice[threadIndex].Browser
 	page := browser.MustPage()
 
@@ -176,18 +174,21 @@ func DealWithPkgPageData(threadIndex int, wg *sync.WaitGroup) {
 		_ = page.Close()
 	}()
 	var pageTitle, chromePageWindowTitle string
-	var originArticle string
 	var fpDst string
 	var versionInfo VersionInfo
 	var result *proto.RuntimeRemoteObject
+	articleUrl := ""
+	desc := ""
 	uniqueMdFilename := "do" + strconv.Itoa(threadIndex) + ".md"
 	relUniqueMdFilePath := filepath.Join("markdown", uniqueMdFilename)
 	typoraWindowTitle := uniqueMdFilename + " - Typora"
 	_, _ = pg.CreateFileIfNotExists(relUniqueMdFilePath)
 	absUniqueMdFilePath, _ := filepath.Abs(relUniqueMdFilePath)
 LabelForContinue:
+
+	_ = tr.TruncFileContent(relUniqueMdFilePath)
 	date := time.Now().Format(time.RFC3339)
-	_, pkg, isEnd := goThirdPkgIndexNext.GetNextPkgInfoFromStack()
+	_, pkg, isEnd := goThirdPkgIndexNext.GetNextPkgInfoFromQueue()
 	lg.InfoToFile(fmt.Sprintf("线程%d正要处理的pkg=%v\n", threadIndex, pkg))
 	if isEnd {
 		if !hadWgDone {
@@ -199,7 +200,14 @@ LabelForContinue:
 	}
 	fpDst = filepath.Join(contants.OutputFolderName, preDir, pkg.Dir, pkg.Filename+".md")
 	_ = tr.TruncFileContent(relUniqueMdFilePath)
+	if pkg.Url == "" {
+		articleUrl = ""
+	} else {
+		articleUrl = fmt.Sprintf(`[%s](%s)`, pkg.Url, pkg.Url)
+	}
 
+	desc = strings.ReplaceAll(pkg.Desc, "\"", "'")
+	desc = strings.ReplaceAll(desc, "\n", " ")
 	page.MustNavigate(pkg.Url)
 	page.MustWaitLoad()
 
@@ -228,11 +236,6 @@ LabelForContinue:
 
 		if !hadExist {
 			preIndexMdF, _ := os.OpenFile(preIndexMd, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
-			if pkg.Url == "" {
-				originArticle = ""
-			} else {
-				originArticle = fmt.Sprintf("[%s](%s)", pkg.Url, pkg.Url)
-			}
 			_, _ = preIndexMdF.WriteString(fmt.Sprintf(`+++
 title = "%s"
 date = %s
@@ -247,7 +250,7 @@ draft = false
 > 原文：%s
 >
 > 收录时间：%s
-`, preIndexMdTitle, date, pkg.Weight, "", originArticle, fmt.Sprintf("`%s`", date)))
+`, preIndexMdTitle, date, pkg.PreCreateIndexWeight, "", "", fmt.Sprintf("`%s`", date)))
 			_ = preIndexMdF.Close()
 		}
 	}
@@ -265,7 +268,7 @@ draft = false
 
 +++
 
-> 原文：[%s](%s)
+> 原文：%s
 >
 > 收录时间：%s
 >
@@ -274,7 +277,7 @@ draft = false
 > 发布时间：%s
 >
 > 仓库网址：[%s](%s)
-`, pkg.PkgName, date, pkg.Weight, "", pkg.Url, pkg.Url, fmt.Sprintf("`%s`", date), versionInfo.Version, versionInfo.CommitTime, versionInfo.Repo, versionInfo.Repo))
+`, pkg.PkgName, date, pkg.Weight, desc, articleUrl, fmt.Sprintf("`%s`", date), versionInfo.Version, versionInfo.CommitTime, versionInfo.Repo, versionInfo.Repo))
 	_ = fpDstF.Close()
 
 	// 获取当前网页的title，在后面会用来查找该网页所在窗口的操作句柄
@@ -287,54 +290,20 @@ draft = false
 		panic(fmt.Errorf("线程%d在网页%s中执行goThirdPkgJs.ReplaceJs遇到错误：%v", threadIndex, pkg.Url, err))
 	}
 
-	_ = DoCopyAndPaste(threadIndex, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle, pkg.Url)
-	lg.InfoToFile(fmt.Sprintf("线程%d正要处理Insert", threadIndex))
-	err = pg.InsertAnyPageData(fpDst, relUniqueMdFilePath, "> 仓库网址：")
-	if err != nil {
-		panic(fmt.Errorf("线程%d在将网页%s中的内容插入到目标md文件时遇到错误：%v", threadIndex, pkg.Url, err))
+	// 再次清空
+	_ = tr.TruncFileContent(relUniqueMdFilePath)
+
+	contentBytes, _ := wind.DoCopyAndPaste(threadIndex, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle, pkg.Url)
+	if contentBytes == 0 {
+		lg.InfoToFile(fmt.Sprintf("线程%d发现复制网页%s的字节数为0，将加入到下一次进行重试", threadIndex, pkg.Url))
+		goThirdPkgIndexNext.PushWaitDealPkgInfoToQueue([]goThirdPkgIndexNext.PkgInfo{pkg})
+	} else {
+		lg.InfoToFile(fmt.Sprintf("线程%d正要处理Insert", threadIndex))
+		err = pg.InsertAnyPageData(fpDst, relUniqueMdFilePath, "> 仓库网址：")
+		if err != nil {
+			panic(fmt.Errorf("线程%d在将网页%s中的内容插入到目标md文件时遇到错误：%v", threadIndex, pkg.Url, err))
+		}
 	}
 
 	goto LabelForContinue
-}
-
-var copyPasteLock sync.Mutex
-
-func DoCopyAndPaste(threadIndex int, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle, url string) (err error) {
-	copyPasteLock.Lock()
-	defer copyPasteLock.Unlock()
-	var typoraHwnd win.HWND
-	browserHwnd := robotgo.FindWindow(chromePageWindowTitle)
-
-	_ = wind.OpenTypora(absUniqueMdFilePath)
-	timeoutChan := time.After(10 * time.Second)
-	ticker := time.NewTicker(500 * time.Millisecond)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			// 每隔 interval 时间检查一次条件
-			hwnd1 := robotgo.FindWindow(typoraWindowTitle)
-			lg.InfoToFile(fmt.Sprintf("%d - typoraHwnd=%v\n", threadIndex, hwnd1))
-			if hwnd1 != 0 {
-				typoraHwnd = hwnd1
-				goto LabelForContinue
-			}
-			//hwnd1, err1 = wind.FindWindowByTitle(uniqueMdFilename + " - Typora")
-		case <-timeoutChan:
-			// 超时后退出循环
-			goto LabelForContinue
-		}
-	}
-LabelForContinue:
-	lg.InfoToFile(fmt.Sprintf("线程%d中获取到的typoraHwnd=%v\n", threadIndex, typoraHwnd))
-
-	contentBytes, err1 := wind.InChromePageDoCtrlAAndC(browserHwnd)
-	lg.InfoToFile(fmt.Sprintf("在页面%s获取到的字节数为：%d\n", url, contentBytes))
-	if err1 != nil {
-		lg.ErrorToFile(fmt.Sprintf("在浏览器中进行复制遇到错误：%v\n", err1))
-	}
-	_ = wind.DoCtrlVAndS(typoraHwnd, contentBytes)
-	_ = win.SendMessage(typoraHwnd, win.WM_CLOSE, 0, 0)
-	time.Sleep(time.Duration(cfg.Default.WaitTyporaCloseSeconds) * time.Second)
-	return nil
 }

@@ -1,3 +1,16 @@
+# god 前置目录名称
+god_pre_folder_name = "god"
+# goThirdPkg 前置目录名称
+goThirdPkg_pre_folder_name = "go_third_pkg"
+# goThirdPkgIndex 前置目录名称
+goThirdPkgIndex_pre_folder_name = "go_third_pkg"
+# pyd 前置目录名称
+pyd_pre_folder_name = "pyd"
+# phpd 前置目录名称
+phpd_pre_folder_name = "phpd"
+# mysqld 前置目录名称
+mysqld_pre_folder_name = "mysqld"
+
 # 等待打开下一个网页的秒数
 wait_open_next_page_seconds = 2
 # 等待typora打开窗口的秒数
@@ -9,9 +22,8 @@ wait_typora_copied_to_save_seconds = 3
 # 等待typora关闭窗口的秒数
 wait_typora_close_seconds = 1
 # 唯一markdown文件路径
-unique_md_filepath = "D:\\GPrjs\\go\\markdown\\do.md"
-#
-output_filepath = "D:\\GPrjs\\go\\output"
+unique_md_filepath = "markdown/do.md"
+
 # 是否使用代理来打开网页，1=使用，2=不使用
 use_proxy = 2
 # 代理使用的协议：http/https/socks4/socks5

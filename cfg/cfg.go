@@ -10,6 +10,12 @@ var canUseUniqueKeySlice = []string{"A"}
 
 // DefaultConfig 定义整体 JSON 文件的结构
 type DefaultConfig struct {
+	GodPreFolderName              string `mapstructure:"god_pre_folder_name"`
+	GoThirdPkgPreFolderName       string `mapstructure:"goThirdPkg_pre_folder_name"`
+	GoThirdPkgIndexPreFolderName  string `mapstructure:"goThirdPkgIndex_pre_folder_name"`
+	PydPreFolderName              string `mapstructure:"pyd_pre_folder_name"`
+	PHPdPreFolderName             string `mapstructure:"phpd_pre_folder_name"`
+	MySQLdPreFolderName           string `mapstructure:"mysqld_pre_folder_name"`
 	WaitOpenNextPageSeconds       int    `mapstructure:"wait_open_next_page_seconds"`
 	WaitTyporaSaveSeconds         int    `mapstructure:"wait_typora_save_seconds"`
 	WaitTyporaCloseSeconds        int    `mapstructure:"wait_typora_close_seconds"`

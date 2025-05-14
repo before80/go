@@ -21,8 +21,8 @@ type MenuInfo struct {
 	Children    []string `json:"children"`
 }
 
-var forMenuInfoStackLock sync.Mutex
-var forMenuInfoStack = arrayqueue.New()
+var forMenuInfoQueueLock sync.Mutex
+var forMenuInfoQueue = arrayqueue.New()
 var IsFirstTimeGetMenuInfo = true
 
 // ReverseMenuInfoSlice 倒序排列
@@ -42,36 +42,37 @@ func ShuffleMenuInfoSlice(infoSlice []MenuInfo) {
 	}
 }
 
-// PushWaitDealMenuInfoToStack 放入栈中
-func PushWaitDealMenuInfoToStack(infoSlice []MenuInfo) {
-	forMenuInfoStackLock.Lock()
-	defer forMenuInfoStackLock.Unlock()
+// PushWaitDealMenuInfoToQueue 放入栈中
+func PushWaitDealMenuInfoToQueue(infoSlice []MenuInfo) {
+	forMenuInfoQueueLock.Lock()
+	defer forMenuInfoQueueLock.Unlock()
 	for _, v := range infoSlice {
-		forMenuInfoStack.Enqueue(v)
+		forMenuInfoQueue.Enqueue(v)
 	}
 }
 
-func ReversePushWaitDealMenuInfoToStack(infoSlice []MenuInfo) {
-	forMenuInfoStackLock.Lock()
-	defer forMenuInfoStackLock.Unlock()
+func ReversePushWaitDealMenuInfoToQueue(infoSlice []MenuInfo) {
+	forMenuInfoQueueLock.Lock()
+	defer forMenuInfoQueueLock.Unlock()
 	ReverseMenuInfoSlice(infoSlice)
 	for _, v := range infoSlice {
-		forMenuInfoStack.Enqueue(v)
+		forMenuInfoQueue.Enqueue(v)
 	}
 }
 
-func GetNextMenuInfoFromStack() (info MenuInfo, isEnd bool) {
-	forMenuInfoStackLock.Lock()
-	defer forMenuInfoStackLock.Unlock()
-	//elCount := forMenuInfoStack.Size()
-	//lg.InfoToFile(fmt.Sprintf("elCount=%d\n", elCount))
+func GetNextMenuInfoFromQueue() (info MenuInfo, isEnd bool) {
+	forMenuInfoQueueLock.Lock()
+	defer forMenuInfoQueueLock.Unlock()
+	elCount := forMenuInfoQueue.Size()
+	lg.InfoToFileAndStdOut(fmt.Sprintf("待处理还有%d个\n", elCount))
+
 	if IsFirstTimeGetMenuInfo {
 		IsFirstTimeGetMenuInfo = false
 	} else {
 		time.Sleep(2 * time.Second)
 	}
 
-	v, ok := forMenuInfoStack.Dequeue()
+	v, ok := forMenuInfoQueue.Dequeue()
 	lg.InfoToFile(fmt.Sprintf("v=%v,ok=%v\n", v, ok))
 	if !ok || v == nil {
 		return MenuInfo{}, true

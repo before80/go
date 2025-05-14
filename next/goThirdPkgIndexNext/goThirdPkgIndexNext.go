@@ -4,7 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"github.com/before80/go/lg"
-	"github.com/emirpasic/gods/stacks/arraystack"
+	"github.com/emirpasic/gods/queues/arrayqueue"
 	"math/rand/v2"
 	"os"
 	"strconv"
@@ -45,8 +45,8 @@ func init() {
 	initWaitHandleBaseInfoCount = len(ThirdPkgBaseInfos)
 }
 
-var forBaseInfoStackLock sync.Mutex
-var forBaseInfoStack = arraystack.New()
+var forBaseInfoQueueLock sync.Mutex
+var forBaseInfoQueue = arrayqueue.New()
 var IsFirstTimeGetBaseInfo = true
 
 // ReverseBaseInfoSlice 倒序排列
@@ -66,17 +66,17 @@ func ShuffleBaseInfoSlice(infoSlice []ThirdPkgBaseInfo) {
 	}
 }
 
-// PushWaitDealBaseInfoToStack 放入栈中
-func PushWaitDealBaseInfoToStack(infoSlice []ThirdPkgBaseInfo) {
+// PushWaitDealBaseInfoToQueue 放入栈中
+func PushWaitDealBaseInfoToQueue(infoSlice []ThirdPkgBaseInfo) {
 	for _, v := range infoSlice {
-		forBaseInfoStack.Push(v)
+		forBaseInfoQueue.Enqueue(v)
 	}
 }
 
-func GetNextBaseInfoFromStack() (index int, info ThirdPkgBaseInfo, isEnd bool) {
-	forBaseInfoStackLock.Lock()
-	defer forBaseInfoStackLock.Unlock()
-	elCount := forBaseInfoStack.Size()
+func GetNextBaseInfoFromQueue() (index int, info ThirdPkgBaseInfo, isEnd bool) {
+	forBaseInfoQueueLock.Lock()
+	defer forBaseInfoQueueLock.Unlock()
+	elCount := forBaseInfoQueue.Size()
 	lg.InfoToFile(fmt.Sprintf("elCount=%d\n", elCount))
 	if IsFirstTimeGetBaseInfo {
 		IsFirstTimeGetBaseInfo = false
@@ -84,7 +84,7 @@ func GetNextBaseInfoFromStack() (index int, info ThirdPkgBaseInfo, isEnd bool) {
 		time.Sleep(2 * time.Second)
 	}
 
-	v, ok := forBaseInfoStack.Pop()
+	v, ok := forBaseInfoQueue.Dequeue()
 	lg.InfoToFile(fmt.Sprintf("v=%v,ok=%v\n", v, ok))
 	if !ok || v == nil {
 		return initWaitHandleBaseInfoCount - elCount, ThirdPkgBaseInfo{}, true
@@ -149,19 +149,20 @@ LabelForContinue:
 }
 
 type PkgInfo struct {
-	PkgName            string `json:"pkg_name"`
-	Filename           string `json:"filename"`
-	Url                string `json:"url"`
-	Dir                string `json:"dir"`
-	Weight             int    `json:"weight"`
-	NeedPreCreateIndex int    `json:"need_pre_create_index"`
-	Desc               string `json:"desc"`
+	PkgName              string `json:"pkg_name"`
+	Filename             string `json:"filename"`
+	Url                  string `json:"url"`
+	Dir                  string `json:"dir"`
+	Weight               int    `json:"weight"`
+	NeedPreCreateIndex   int    `json:"need_pre_create_index"`
+	PreCreateIndexWeight int    `json:"pre_create_index_weight"`
+	Desc                 string `json:"desc"`
 }
 
 var AllPkgInfos []PkgInfo
 var initWaitHandlePkgInfoCount int
-var forPkgInfoStackLock sync.Mutex
-var forPkgInfoStack = arraystack.New()
+var forPkgInfoQueueLock sync.Mutex
+var forPkgInfoQueue = arrayqueue.New()
 var IsFirstTimeGetPkgInfo = true
 
 func InitWaitHandlePkgInfoCount() {
@@ -174,22 +175,22 @@ func ReversePkgInfoSlice(infoSlice []PkgInfo) {
 	}
 }
 
-func PushWaitDealPkgInfoToStack(infoSlice []PkgInfo) {
+func PushWaitDealPkgInfoToQueue(infoSlice []PkgInfo) {
 	for _, v := range infoSlice {
-		forPkgInfoStack.Push(v)
+		forPkgInfoQueue.Enqueue(v)
 	}
 }
 
-func GetNextPkgInfoFromStack() (index int, info PkgInfo, isEnd bool) {
-	forPkgInfoStackLock.Lock()
-	defer forPkgInfoStackLock.Unlock()
-	elCount := forPkgInfoStack.Size()
-	lg.InfoToFile(fmt.Sprintf("elCount=%d\n", elCount))
+func GetNextPkgInfoFromQueue() (index int, info PkgInfo, isEnd bool) {
+	forPkgInfoQueueLock.Lock()
+	defer forPkgInfoQueueLock.Unlock()
+	elCount := forPkgInfoQueue.Size()
+	lg.InfoToFileAndStdOut(fmt.Sprintf("待处理还有%d个\n", elCount))
 	if IsFirstTimeGetPkgInfo {
 		IsFirstTimeGetPkgInfo = false
 	}
 
-	v, ok := forPkgInfoStack.Pop()
+	v, ok := forPkgInfoQueue.Dequeue()
 	lg.InfoToFile(fmt.Sprintf("v=%v,ok=%v\n", v, ok))
 	if !ok || v == nil {
 		return initWaitHandlePkgInfoCount - elCount, PkgInfo{}, true

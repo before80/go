@@ -24,71 +24,74 @@
         let menuName = ""
         let filename = ""
         let url = ""
-        const td1 = tr.querySelector(":scope > td:first-child")
         let isTopMenu = 2
-        if (td1) {
-            const div1 = td1.querySelector(":scope > div:first-child")
-            if (div1) {
-                if (div1.getAttribute("class") === "UnitDirectories-subdirectory") {
-                    if (td1.querySelector("a")) {
-                        menuName = td1.querySelector("a").textContent.trim()
-                        filename = menuName.replace(/[\/\s]/g, '_')
-                        url = td1.querySelector("a").href.trim()
-                        subMenuIndex++
-                    }
-                } else {
-                    if (td1.querySelector("a")) {
-                        menuName = td1.querySelector("a").textContent.trim()
-                        filename = menuName.replace(/[\/\s]/g, '_')
-                        url = td1.querySelector("a").href.trim()
-                        curTopFilename = filename
-                        isTopMenu = 1
-                    } else {
-                        if (td1.querySelector("span")) {
-                            menuName = td1.querySelector("span").textContent.trim()
+        if (!tr.classList.contains("UnitDirectories-internal")) {
+            const td1 = tr.querySelector(":scope > td:first-child")
+
+            if (td1) {
+                const div1 = td1.querySelector(":scope > div:first-child")
+                if (div1) {
+                    if (div1.getAttribute("class") === "UnitDirectories-subdirectory") {
+                        if (td1.querySelector("a")) {
+                            menuName = td1.querySelector("a").textContent.trim()
                             filename = menuName.replace(/[\/\s]/g, '_')
-                            url = ""
+                            url = td1.querySelector("a").href.trim()
+                            subMenuIndex++
+                        }
+                    } else {
+                        if (td1.querySelector("a")) {
+                            menuName = td1.querySelector("a").textContent.trim()
+                            filename = menuName.replace(/[\/\s]/g, '_')
+                            url = td1.querySelector("a").href.trim()
                             curTopFilename = filename
                             isTopMenu = 1
+                        } else {
+                            if (td1.querySelector("span")) {
+                                menuName = td1.querySelector("span").textContent.trim()
+                                filename = menuName.replace(/[\/\s]/g, '_')
+                                url = ""
+                                curTopFilename = filename
+                                isTopMenu = 1
+                            }
                         }
                     }
                 }
             }
-        }
-        const td2 = tr.querySelector(":scope > td:nth-child(2)")
-        if (td2) {
-            desc = td2.textContent.trim()
-        }
-        if (filename && !(filename.startsWith("internal") || filename.indexOf("internal") != -1)) {
-            if (isTopMenu === 1) {
-                subMenuIndex = 0
-                if (topMenuIndex === 0) {
-                    topMenuIndex++
-                }
-                pkgInfos.push({
-                    menu_name: menuName,
-                    filename: filename,
-                    url: url,
-                    desc: desc,
-                    is_top_menu: isTopMenu,
-                    weight: topMenuIndex,
-                    p_filename: "",
-                    children: [],
-                })
-            } else {
-                pkgInfos.push({
-                    menu_name: menuName,
-                    filename: filename,
-                    url: url,
-                    desc: desc,
-                    is_top_menu: isTopMenu,
-                    weight: subMenuIndex,
-                    p_filename: curTopFilename,
-                    children: [],
-                })
-                for (let i = 0; i < pkgInfos.length; i++) {
-                    if (pkgInfos[i].filename === curTopFilename) {
-                        pkgInfos[i].children.push(filename);
+            const td2 = tr.querySelector(":scope > td:nth-child(2)")
+            if (td2) {
+                desc = td2.textContent.trim()
+            }
+            if (filename && !(filename.startsWith("internal") || filename.indexOf("internal") != -1)) {
+                if (isTopMenu === 1) {
+                    subMenuIndex = 0
+                    if (topMenuIndex === 0) {
+                        topMenuIndex++
+                    }
+                    pkgInfos.push({
+                        menu_name: menuName,
+                        filename: filename,
+                        url: url,
+                        desc: desc,
+                        is_top_menu: isTopMenu,
+                        weight: topMenuIndex,
+                        p_filename: "",
+                        children: [],
+                    })
+                } else {
+                    pkgInfos.push({
+                        menu_name: menuName,
+                        filename: filename,
+                        url: url,
+                        desc: desc,
+                        is_top_menu: isTopMenu,
+                        weight: subMenuIndex,
+                        p_filename: curTopFilename,
+                        children: [],
+                    })
+                    for (let i = 0; i < pkgInfos.length; i++) {
+                        if (pkgInfos[i].filename === curTopFilename) {
+                            pkgInfos[i].children.push(filename);
+                        }
                     }
                 }
             }

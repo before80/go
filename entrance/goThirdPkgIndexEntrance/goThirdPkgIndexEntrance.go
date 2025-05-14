@@ -6,17 +6,20 @@ import (
 	"github.com/before80/go/lg"
 	"github.com/before80/go/next/goThirdPkgIndexNext"
 	"github.com/before80/go/pg/goThirdPkgIndexPg"
+	"github.com/before80/go/tr"
+	"github.com/before80/go/wind"
 	"github.com/go-rod/rod/lib/defaults"
 	"github.com/spf13/cobra"
+	"path/filepath"
 	"strconv"
 	"sync"
+	"time"
 )
 
 func Do(cmd *cobra.Command) {
 	defaults.ResetWith("show=true")
 
-	goThirdPkgIndexNext.ReverseBaseInfoSlice(goThirdPkgIndexNext.ThirdPkgBaseInfos)
-	goThirdPkgIndexNext.PushWaitDealBaseInfoToStack(goThirdPkgIndexNext.ThirdPkgBaseInfos)
+	goThirdPkgIndexNext.PushWaitDealBaseInfoToQueue(goThirdPkgIndexNext.ThirdPkgBaseInfos)
 
 	//fmt.Println("thirdPkgBaseInfos")
 	threadNum, err := cmd.Flags().GetInt("thread-num")
@@ -44,7 +47,7 @@ func Do(cmd *cobra.Command) {
 	var wg sync.WaitGroup
 	for i := 0; i < threadNum; i++ {
 		wg.Add(1)
-		go goThirdPkgIndexPg.DealWithPkgPageData(i, &wg)
+		go goThirdPkgIndexPg.DealWithPkgBaseInfo(i, &wg)
 	}
 	wg.Wait()
 
@@ -55,12 +58,17 @@ func Do(cmd *cobra.Command) {
 	}
 	lg.InfoToFile(fmt.Sprintf("AllPkgInfos=%v\n", goThirdPkgIndexNext.AllPkgInfos))
 	goThirdPkgIndexNext.InitWaitHandlePkgInfoCount()
-	goThirdPkgIndexNext.ReversePkgInfoSlice(goThirdPkgIndexNext.AllPkgInfos)
-	goThirdPkgIndexNext.PushWaitDealPkgInfoToStack(goThirdPkgIndexNext.AllPkgInfos)
+	goThirdPkgIndexNext.PushWaitDealPkgInfoToQueue(goThirdPkgIndexNext.AllPkgInfos)
 
-	for i := 0; i < threadNum; i++ {
+	for j := 0; j < threadNum; j++ {
 		wg.Add(1)
-		go goThirdPkgIndexPg.DealWithPkgPageData(i, &wg)
+		uniqueMdFilename := "do" + strconv.Itoa(j) + ".md"
+		relUniqueMdFilePath := filepath.Join("markdown", uniqueMdFilename)
+		absUniqueMdFilePath, _ := filepath.Abs(relUniqueMdFilePath)
+		_ = tr.TruncFileContent(relUniqueMdFilePath)
+		_ = wind.OpenTypora(absUniqueMdFilePath)
+		time.Sleep(2 * time.Second)
+		go goThirdPkgIndexPg.DealWithPkgPageData(j, &wg)
 	}
 	wg.Wait()
 

@@ -37,7 +37,7 @@ func Do(cmd *cobra.Command) {
 	page = browser.MustPage()
 	var menuInfos []godNext.MenuInfo
 	menuInfos, err = godPg.GetAllStdPkgInfo(page, "https://pkg.go.dev/std")
-	godNext.PushWaitDealMenuInfoToStack(menuInfos)
+	godNext.PushWaitDealMenuInfoToQueue(menuInfos)
 	_ = browser.Close()
 	//fmt.Println("thirdPkgBaseInfos")
 	threadNum, err := cmd.Flags().GetInt("thread-num")
