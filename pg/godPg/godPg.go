@@ -35,7 +35,7 @@ func GetAllStdPkgInfo(page *rod.Page, url string) (stdPkgMenuInfos []godNext.Men
 	var result *proto.RuntimeRemoteObject
 	result, err = page.Eval(godJs.FromTableGetAllStdPkgInfoJs)
 	if err != nil {
-		return nil, fmt.Errorf("在网页%s中执行GetBarMenusJs遇到错误：%v", url, err)
+		return nil, fmt.Errorf("在网页%s中执行godJs.FromTableGetAllStdPkgInfoJs遇到错误：%v", url, err)
 	}
 
 	// 将结果序列化为 JSON 字节
