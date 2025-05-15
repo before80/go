@@ -177,6 +177,7 @@ func DealWithPkgPageData(threadIndex int, wg *sync.WaitGroup) {
 	var fpDst string
 	var versionInfo VersionInfo
 	var result *proto.RuntimeRemoteObject
+	var hadInsetPageData bool
 	articleUrl := ""
 	desc := ""
 	uniqueMdFilename := "do" + strconv.Itoa(threadIndex) + ".md"
@@ -185,7 +186,6 @@ func DealWithPkgPageData(threadIndex int, wg *sync.WaitGroup) {
 	_, _ = pg.CreateFileIfNotExists(relUniqueMdFilePath)
 	absUniqueMdFilePath, _ := filepath.Abs(relUniqueMdFilePath)
 LabelForContinue:
-
 	_ = tr.TruncFileContent(relUniqueMdFilePath)
 	date := time.Now().Format(time.RFC3339)
 	_, pkg, isEnd := goThirdPkgIndexNext.GetNextPkgInfoFromQueue()
@@ -198,8 +198,15 @@ LabelForContinue:
 		}
 		return
 	}
+
 	fpDst = filepath.Join(contants.OutputFolderName, preDir, pkg.Dir, pkg.Filename+".md")
-	_ = tr.TruncFileContent(relUniqueMdFilePath)
+	// 判断md文件中是否已经插入内容
+	hadInsetPageData, err = pg.JudgeHadInsertPageData(fpDst, "> 仓库网址：")
+	if hadInsetPageData {
+		lg.InfoToFileAndStdOut(fmt.Sprintf("%s之前已经插入过数据\n", pkg.PkgName))
+		goto LabelForContinue
+	}
+
 	if pkg.Url == "" {
 		articleUrl = ""
 	} else {

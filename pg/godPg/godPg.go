@@ -75,6 +75,7 @@ func DealWithMenuPageData(threadIndex int, wg *sync.WaitGroup) {
 	var pageTitle, chromePageWindowTitle string
 	var fpDst string
 	var result *proto.RuntimeRemoteObject
+	var hadInsetPageData bool
 	articleUrl := ""
 	desc := ""
 	uniqueMdFilename := "do" + strconv.Itoa(threadIndex) + ".md"
@@ -95,15 +96,6 @@ LabelForContinue:
 		}
 		return
 	}
-	if curMenu.Url == "" {
-		articleUrl = ""
-	} else {
-		articleUrl = fmt.Sprintf(`[%s](%s)`, curMenu.Url, curMenu.Url)
-	}
-	desc = strings.ReplaceAll(curMenu.Desc, "\"", "'")
-	desc = strings.ReplaceAll(desc, "\n", " ")
-	page.MustNavigate(curMenu.Url)
-	page.MustWaitLoad()
 
 	if curMenu.IsTopMenu == 1 {
 		if len(curMenu.Children) > 0 {
@@ -118,6 +110,24 @@ LabelForContinue:
 			fpDst = filepath.Join(contants.OutputFolderName, preDir, curMenu.PFilename, curMenu.Filename+".md")
 		}
 	}
+
+	// 判断md文件中是否已经插入内容
+	hadInsetPageData, err = pg.JudgeHadInsertPageData(fpDst, "> 收录时间：")
+	if hadInsetPageData {
+		lg.InfoToFileAndStdOut(fmt.Sprintf("%s之前已经插入过数据\n", curMenu.MenuName))
+		goto LabelForContinue
+	}
+
+	if curMenu.Url == "" {
+		articleUrl = ""
+	} else {
+		articleUrl = fmt.Sprintf(`[%s](%s)`, curMenu.Url, curMenu.Url)
+	}
+
+	desc = strings.ReplaceAll(curMenu.Desc, "\"", "'")
+	desc = strings.ReplaceAll(desc, "\n", " ")
+	page.MustNavigate(curMenu.Url)
+	page.MustWaitLoad()
 
 	hadExist, _ := pg.CreateFileIfNotExists(fpDst)
 	_ = hadExist
