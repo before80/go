@@ -1,15 +1,24 @@
 # god 前置目录名称
 god_pre_folder_name = "god"
+# god 入口网址
+god_entrance_url = "https://pkg.go.dev/std"
 # goThirdPkg 前置目录名称
 goThirdPkg_pre_folder_name = "go_third_pkg"
 # goThirdPkgIndex 前置目录名称
 goThirdPkgIndex_pre_folder_name = "go_third_pkg"
 # pyd 前置目录名称
 pyd_pre_folder_name = "pyd"
+# pyd 入口网址
+pyd_entrance_url = "https://docs.python.org/zh-cn/3.13/index.html"
 # phpd 前置目录名称
 phpd_pre_folder_name = "phpd"
+# pyd 入口网址
+phpd_entrance_url = "https://www.php.net/manual/zh/index.php"
 # mysqld 前置目录名称
 mysqld_pre_folder_name = "mysqld"
+# mysqld 入口网址
+mysqld_entrance_url = "https://dev.mysql.com/doc/refman/8.0/en/"
+
 
 # 等待打开下一个网页的秒数
 wait_open_next_page_seconds = 2

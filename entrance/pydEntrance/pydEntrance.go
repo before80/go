@@ -3,15 +3,14 @@ package pydEntrance
 import (
 	"fmt"
 	"github.com/before80/go/bs"
+	"github.com/before80/go/cfg"
+	"github.com/before80/go/entrance"
 	"github.com/before80/go/lg"
 	"github.com/before80/go/next/pydNext"
 	"github.com/before80/go/pg/pydPg"
-	"github.com/before80/go/tr"
-	"github.com/before80/go/wind"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/defaults"
 	"github.com/spf13/cobra"
-	"path/filepath"
 	"strconv"
 	"sync"
 	"time"
@@ -36,7 +35,7 @@ func Do(cmd *cobra.Command) {
 	// 创建新页面
 	page = browser.MustPage()
 	var barMenuInfos []pydNext.MenuInfo
-	barMenuInfos, err = pydPg.GetBarMenus(page, "https://docs.python.org/zh-cn/3.13/index.html")
+	barMenuInfos, err = pydPg.GetBarMenus(page, cfg.Default.PydEntranceUrl)
 	pydNext.PushWaitDealMenuInfoToQueue(barMenuInfos)
 	_ = browser.Close()
 	//fmt.Println("thirdPkgBaseInfos")
@@ -59,12 +58,7 @@ func Do(cmd *cobra.Command) {
 				}
 			}
 		}
-		uniqueMdFilename := "do" + strconv.Itoa(j) + ".md"
-		relUniqueMdFilePath := filepath.Join("markdown", uniqueMdFilename)
-		absUniqueMdFilePath, _ := filepath.Abs(relUniqueMdFilePath)
-		_ = tr.TruncFileContent(relUniqueMdFilePath)
-		_ = wind.OpenTypora(absUniqueMdFilePath)
-		time.Sleep(2 * time.Second)
+		entrance.OpenUniqueMdFile(j)
 		bs.MyBrowserSlice[j] = bs.MyBrowser{Browser: browser1, Ok: true, Index: j}
 	}
 

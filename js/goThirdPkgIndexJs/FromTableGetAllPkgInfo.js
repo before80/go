@@ -132,7 +132,7 @@
                                 }
 
                                 if (td2) {
-                                    desc = td2.textContent.trim()
+                                    desc = td2.textContent.trim().replace(/"/g, '\\"').replace(/\s+/g, " ")
                                 } else {
                                     desc = ""
                                 }

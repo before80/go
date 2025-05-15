@@ -3,18 +3,23 @@ package mysqldEntrance
 import (
 	"fmt"
 	"github.com/before80/go/bs"
+	"github.com/before80/go/cfg"
+	"github.com/before80/go/entrance"
 	"github.com/before80/go/lg"
+	"github.com/before80/go/next/mysqldNext"
 	"github.com/before80/go/pg/mysqldPg"
-	"github.com/before80/go/pg/phpdPg"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/defaults"
-	"github.com/go-vgo/robotgo"
-	"github.com/tailscale/win"
+	"github.com/spf13/cobra"
 	"strconv"
+	"sync"
+	"time"
 )
 
-func Do() {
-	defer phpdPg.CloseInitFiles()
+func Do(cmd *cobra.Command) {
+	startTime := time.Now()
+	lg.InfoToFileAndStdOut(fmt.Sprintf("开始时间：%v\n", startTime))
+
 	var err error
 	defer func() {
 		if err != nil {
@@ -22,32 +27,49 @@ func Do() {
 		}
 	}()
 	defaults.ResetWith("show=true")
-	_ = err
 	var browser *rod.Browser
 	var page *rod.Page
-	var browserHwnd win.HWND
 	// 打开浏览器
 	browser, err = bs.GetBrowser(strconv.Itoa(0))
 	defer browser.MustClose()
 	// 创建新页面
 	page = browser.MustPage()
-	browserHwnd = robotgo.GetHWND()
-
-	var menuInfos []mysqldPg.MenuInfo
-	menuInfos, err = mysqldPg.GetAllMenuInfo(page, "https://dev.mysql.com/doc/refman/8.0/en/")
-	menuInfosLen := len(menuInfos)
-	fmt.Println("menuInfos=", menuInfos)
-	for i, menuInfo := range menuInfos {
-		//if !slices.Contains([]string{""}, menuInfo.Filename) {
-		//	continue
-		//}
-		surplus := menuInfosLen - i - 1
-		err = mysqldPg.DealMenuMdFile(surplus, browserHwnd, "mysql", menuInfo, page)
-		if err != nil {
-			lg.ErrorToFileAndStdOutWithSleepSecond(fmt.Sprintf("%v\n", err), 3)
-			return
-		}
+	var barMenuInfos []mysqldNext.MenuInfo
+	barMenuInfos, err = mysqldPg.GetAllMenuInfo(page, cfg.Default.MySQLdEntranceUrl)
+	mysqldNext.PushWaitDealMenuInfoToQueue(barMenuInfos)
+	_ = browser.Close()
+	//fmt.Println("thirdPkgBaseInfos")
+	threadNum, err := cmd.Flags().GetInt("thread-num")
+	if err != nil {
+		lg.InfoToFileAndStdOut(fmt.Sprintf("获取线程数标志时出错：%v\n", err))
+		return
 	}
-	mysqldPg.CloseInitFiles()
-	lg.InfoToFileAndStdOut("已全部处理完成！")
+
+	bs.MyBrowserSlice = make([]bs.MyBrowser, threadNum)
+	// 实例化多个 *rod.Browser 实例
+	for j := 0; j < threadNum; j++ {
+		browser1, err1 := bs.GetBrowser(strconv.Itoa(j))
+		if err1 != nil {
+			if len(bs.MyBrowserSlice) > 0 {
+				for _, mb := range bs.MyBrowserSlice {
+					if mb.Browser != nil {
+						_ = mb.Browser.Close()
+					}
+				}
+			}
+		}
+		entrance.OpenUniqueMdFile(j)
+		bs.MyBrowserSlice[j] = bs.MyBrowser{Browser: browser1, Ok: true, Index: j}
+	}
+
+	var wg sync.WaitGroup
+	for i := 0; i < threadNum; i++ {
+		wg.Add(1)
+		go mysqldPg.DealWithMenuPageData(i, &wg)
+	}
+	wg.Wait()
+	lg.InfoToFileAndStdOut(fmt.Sprintf("结束时间：%v\n", time.Now()))
+	lg.InfoToFileAndStdOut(fmt.Sprintf("用时：%.2f分钟\n", time.Since(startTime).Minutes()))
+	lg.InfoToFileAndStdOut("已完成处理！")
+
 }

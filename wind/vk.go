@@ -2,6 +2,7 @@ package wind
 
 import (
 	"github.com/gonutz/w32/v3"
+	"sync"
 	"syscall"
 	"time"
 	"unsafe"
@@ -154,21 +155,36 @@ var (
 	procSendMessage      = user32.NewProc("SendMessageW")
 )
 
-type enumChildCallback func(hwnd syscall.Handle, lparam uintptr) uintptr
+var (
+	onceCallback sync.Once
+	enumCallback uintptr
+)
 
-func enumChildWindows(parent syscall.Handle, callback enumChildCallback, lparam uintptr) bool {
-	cb := syscall.NewCallback(callback)
-	ret, _, _ := procEnumChildWindows.Call(
-		uintptr(parent),
-		cb,
-		lparam,
-	)
-	return ret != 0
+// 存储结果的结构体，通过 lparam 传递
+type findWindowResult struct {
+	targetClass string
+	hwnd        w32.HWND
 }
 
+// 初始化回调函数（只执行一次）
+func ensureCallbackInitialized() {
+	onceCallback.Do(func() {
+		enumCallback = syscall.NewCallback(func(hwnd syscall.Handle, lparam uintptr) uintptr {
+			result := (*findWindowResult)(unsafe.Pointer(lparam))
+			className := getClassName(hwnd)
+			if className == result.targetClass {
+				result.hwnd = w32.HWND(hwnd)
+				return 0 // 停止枚举
+			}
+			return 1 // 继续枚举
+		})
+	})
+}
+
+// 获取窗口类名
 func getClassName(hwnd syscall.Handle) string {
 	buffer := make([]uint16, 256)
-	_, _, _ = procGetClassName.Call(
+	procGetClassName.Call(
 		uintptr(hwnd),
 		uintptr(unsafe.Pointer(&buffer[0])),
 		uintptr(len(buffer)),
@@ -176,24 +192,65 @@ func getClassName(hwnd syscall.Handle) string {
 	return syscall.UTF16ToString(buffer)
 }
 
-// FindChromeBrowserContentWindow 查找Chrome浏览器指定网页的内容窗口
+// FindChromeBrowserContentWindow 查找 Chrome 浏览器内容窗口
 func FindChromeBrowserContentWindow(parent w32.HWND) w32.HWND {
-	var contentHwnd w32.HWND
+	ensureCallbackInitialized()
 
-	callback := func(hwnd syscall.Handle, lparam uintptr) uintptr {
-		className := getClassName(hwnd)
-		// Chrome：类名 Chrome_RenderWidgetHostHWND
-		// Firefox：类名 MozillaWindowClass 的子窗口
-		if className == "Chrome_RenderWidgetHostHWND" {
-			contentHwnd = w32.HWND(hwnd)
-			return 0
-		}
-		return 1
+	result := &findWindowResult{
+		targetClass: "Chrome_RenderWidgetHostHWND",
+		hwnd:        0,
 	}
 
-	enumChildWindows(syscall.Handle(parent), callback, 0)
-	return contentHwnd
+	procEnumChildWindows.Call(
+		uintptr(parent),
+		enumCallback,
+		uintptr(unsafe.Pointer(result)),
+	)
+
+	return result.hwnd
 }
+
+//
+//type enumChildCallback func(hwnd syscall.Handle, lparam uintptr) uintptr
+//
+//func enumChildWindows(parent syscall.Handle, callback enumChildCallback, lparam uintptr) bool {
+//	cb := syscall.NewCallback(callback)
+//	ret, _, _ := procEnumChildWindows.Call(
+//		uintptr(parent),
+//		cb,
+//		lparam,
+//	)
+//	return ret != 0
+//}
+//
+//func getClassName(hwnd syscall.Handle) string {
+//	buffer := make([]uint16, 1024)
+//	_, _, _ = procGetClassName.Call(
+//		uintptr(hwnd),
+//		uintptr(unsafe.Pointer(&buffer[0])),
+//		uintptr(len(buffer)),
+//	)
+//	return syscall.UTF16ToString(buffer)
+//}
+//
+//// FindChromeBrowserContentWindow 查找Chrome浏览器指定网页的内容窗口
+//func FindChromeBrowserContentWindow(parent w32.HWND) w32.HWND {
+//	var contentHwnd w32.HWND
+//
+//	callback := func(hwnd syscall.Handle, lparam uintptr) uintptr {
+//		className := getClassName(hwnd)
+//		// Chrome：类名 Chrome_RenderWidgetHostHWND
+//		// Firefox：类名 MozillaWindowClass 的子窗口
+//		if className == "Chrome_RenderWidgetHostHWND" {
+//			contentHwnd = w32.HWND(hwnd)
+//			return 0
+//		}
+//		return 1
+//	}
+//
+//	enumChildWindows(syscall.Handle(parent), callback, 0)
+//	return contentHwnd
+//}
 
 func keybdEvent(bVk, bScan, dwFlags, dwExtraInfo byte) {
 	_, _, _ = procKeyBdEvent.Call(

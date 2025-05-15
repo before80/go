@@ -61,6 +61,39 @@ draft = false
 	return nil
 }
 
+func JudgeHadInsertPageData(fpDst, waitFindLineStr string) (hadInsert bool, err error) {
+	var dstFile *os.File
+	if !JudgeFileExist(fpDst) {
+		return false, nil
+	}
+
+	dstFile, err = os.OpenFile(fpDst, os.O_RDONLY, 0666)
+	if err != nil {
+		return false, fmt.Errorf("打开文件 %s 时出错: %v\n", fpDst, err)
+	}
+	defer dstFile.Close()
+	foundLine := false
+	scanner := bufio.NewScanner(dstFile)
+	insertLine := 0
+	for scanner.Scan() {
+		line := scanner.Text()
+		if strings.HasPrefix(line, waitFindLineStr) {
+			foundLine = true
+			continue
+		}
+
+		if foundLine && strings.TrimSpace(line) != "" {
+			insertLine++
+		}
+
+		if insertLine > 0 {
+			break
+		}
+	}
+
+	return insertLine > 0, nil
+}
+
 // InsertAnyPageData 插入页面数据
 func InsertAnyPageData(fpDst, fpSrc string, waitFindLineStr string) (err error) {
 	var dstFile, srcFile *os.File

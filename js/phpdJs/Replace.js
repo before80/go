@@ -89,6 +89,46 @@ function removeSomething() {
     }
 }
 
+function replaceQandaentry() {
+    const dls = document.querySelectorAll("dl.qandaentry")
+    if (dls.length > 0) {
+        dls.forEach(dl => {
+            const dt = dl.querySelector("dt")
+
+            if (dt) {
+                const h2 = document.createElement("h2")
+                const codes = dt.querySelectorAll("code")
+                if (codes.length > 0) {
+                    codes.forEach(code => {
+                        code.innerHTML = "\u0060" + code.innerHTML + "\u0060";
+                    })
+                }
+                const strong1s= dt.querySelectorAll("strong.option.configure")
+                if (strong1s.length > 0) {
+                    strong1s.forEach(strong => {
+                        strong.innerHTML = "\u0060" + strong.innerHTML + "\u0060";
+                    })
+                }
+
+                h2.textContent = dt.textContent.trim() + `{#${dl.getAttribute("id")}}`
+                dl.insertAdjacentElement("beforebegin", h2)
+            }
+            const dd= dl.querySelector("dd")
+            if (dd) {
+                const div = document.createElement("div")
+                const strong2s= dd.querySelectorAll("strong.option.configure")
+                if (strong2s.length > 0) {
+                    strong2s.forEach(strong => {
+                        strong.innerHTML = "\u0060" + strong.innerHTML + "\u0060";
+                    })
+                }
+                div.innerHTML = dd.innerHTML
+                dl.insertAdjacentElement("beforebegin", div)
+            }
+            dl.remove()
+        })
+    }
+}
 
 function convertCodeToHtml(code, lang) {
     // 将 \t 替换为四个空格
@@ -126,6 +166,21 @@ function replaceShellCode() {
         })
     }
 }
+
+function replaceApacheConfcode() {
+    const confCodes = document.querySelectorAll("div.apache-confcode")
+    if (confCodes.length > 0) {
+        confCodes.forEach(sc => {
+            const pre = sc.querySelector(":scope > pre")
+            const div = document.createElement("div")
+            const html = `<pre><code class="text-sm text-gray-800 bg-gray-200 p-4 rounded-md language-apache">${pre.innerHTML}</code></pre>`;
+            div.insertAdjacentHTML("afterbegin", html)
+            pre.insertAdjacentElement("afterend", div)
+            pre.remove()
+        })
+    }
+}
+
 
 function replaceHtmlCode() {
     const htmlCodes = document.querySelectorAll("div.htmlcode")
@@ -245,7 +300,9 @@ function addHeaderAnchorAndRemoveGenanchor() {
 
 
 removeSomething();
+replaceQandaentry();
 replaceDivClassSynopsis();
+replaceApacheConfcode();
 replaceShellCode();
 replaceHtmlCode();
 replacePHPCode();

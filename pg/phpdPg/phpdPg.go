@@ -240,40 +240,42 @@ draft = false
 		panic(fmt.Errorf("线程%d在网页%s中执行ReplaceJs遇到错误：%v", threadIndex, curMenu.Url, err))
 	}
 
-	result, err = page.Eval(fmt.Sprintf(`() => { return document.querySelector("#layout-content").textContent.trim() }`, phpdJs.ReplaceJs))
-	if err != nil {
-		panic(fmt.Sprintf("线程%d在网页%s中执行js获取复制区域的内容遇到错误：%v", threadIndex, curMenu.Url, err))
-	}
+	//result, err = page.Eval(fmt.Sprintf(`() => { return document.querySelector("#layout-content").textContent.trim() }`))
+	//if err != nil {
+	//	panic(fmt.Sprintf("线程%d在网页%s中执行js获取复制区域的内容遇到错误：%v", threadIndex, curMenu.Url, err))
+	//}
+	//
+	//if strings.TrimSpace(result.Value.String()) != "" {
+	//
+	//}
 
-	if strings.TrimSpace(result.Value.String()) != "" {
-		// 获取当前网页的title，在后面会用来查找该网页所在窗口的操作句柄
-		result, _ = page.Eval(`() => { return document.title }`)
-		pageTitle = result.Value.String()
-		chromePageWindowTitle = pageTitle + " - Google Chrome"
+	// 获取当前网页的title，在后面会用来查找该网页所在窗口的操作句柄
+	result, _ = page.Eval(`() => { return document.title }`)
+	pageTitle = result.Value.String()
+	chromePageWindowTitle = pageTitle + " - Google Chrome"
 
-		// 再次清空
-		_ = tr.TruncFileContent(relUniqueMdFilePath)
+	// 再次清空
+	_ = tr.TruncFileContent(relUniqueMdFilePath)
 
-		contentBytes, _ := wind.DoCopyAndPaste(threadIndex, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle, curMenu.Url)
+	contentBytes, _ := wind.DoCopyAndPaste(threadIndex, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle, curMenu.Url)
 
-		if contentBytes == 0 {
-			lg.InfoToFile(fmt.Sprintf("线程%d发现复制网页%s的字节数为0，将加入到下一次进行重试", threadIndex, curMenu.Url))
-			curMenu.Retry = curMenu.Retry + 1
-			phpdNext.PushWaitDealMenuInfoToQueue([]phpdNext.MenuInfo{curMenu})
-		} else {
-			_, err = phpdTr.ReplaceMarkdownFileContent(absUniqueMdFilePath)
-			if err != nil {
-				panic(fmt.Errorf("线程%d在替换网页%s的内容对应的md文件时出现错误：%v", threadIndex, curMenu.Url, err))
-			}
-			lg.InfoToFile(fmt.Sprintf("线程%d正要处理Insert", threadIndex))
-			err = pg.InsertAnyPageData(fpDst, relUniqueMdFilePath, "> 收录时间：")
-			if err != nil {
-				panic(fmt.Errorf("线程%d在将网页%s中的内容插入到目标md文件时遇到错误：%v", threadIndex, curMenu.Url, err))
-			}
+	if contentBytes == 0 {
+		lg.InfoToFile(fmt.Sprintf("线程%d发现复制网页%s的字节数为0，将加入到下一次进行重试", threadIndex, curMenu.Url))
+		curMenu.Retry = curMenu.Retry + 1
+		//phpdNext.PushWaitDealMenuInfoToQueue([]phpdNext.MenuInfo{curMenu})
+	} else {
+		_, err = phpdTr.ReplaceMarkdownFileContent(absUniqueMdFilePath)
+		if err != nil {
+			panic(fmt.Errorf("线程%d在替换网页%s的内容对应的md文件时出现错误：%v", threadIndex, curMenu.Url, err))
+		}
+		lg.InfoToFile(fmt.Sprintf("线程%d正要处理Insert", threadIndex))
+		err = pg.InsertAnyPageData(fpDst, relUniqueMdFilePath, "> 收录时间：")
+		if err != nil {
+			panic(fmt.Errorf("线程%d在将网页%s中的内容插入到目标md文件时遇到错误：%v", threadIndex, curMenu.Url, err))
 		}
 	}
 
-	if curMenu.Retry == 0 && len(subMenuInfos) > 0 {
+	if len(subMenuInfos) > 0 {
 		// 将 subMenuInfos 推入
 		phpdNext.PushWaitDealMenuInfoToQueue(subMenuInfos)
 	}

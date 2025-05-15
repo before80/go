@@ -15,7 +15,7 @@
                         menu_name: a.textContent.trim().replace(/[\"\'\/\\\$#@&\(\)]/g,'').replace(/\s+/g, " "),
                         filename: filename,
                         url: url,
-                        index: i + 1,
+                        weight: i + 1,
                         children: [],
                     };
                     const nestedUl = li.querySelector(':scope > div.docs-submenu > ul');
@@ -29,22 +29,31 @@
         return liData;
     }
 
-    function pushChildrenIData(chd, parentDirPath) {
+    function pushChildrenIData(chd, parentDir) {
         const iData = chd
         for (let i = 0; i < iData.length; i++) {
             const dv = iData[i]
-            menuInfos.push({
-                menu_name: dv.menu_name,
-                url: dv.url,
-                filename: dv.filename,
-                file_path: dv.children && dv.children.length > 0 ? `${parentDirPath}/${dv.filename}/_index.md` : `${parentDirPath}/${dv.filename}.md`,
-                index: dv.index,
-                isTop: 2,
-            })
-            let dirPath = dv.children && dv.children.length > 0 ? `${parentDirPath}/${dv.filename}` : parentDirPath
-
             if (dv.children && dv.children.length > 0) {
-                pushChildrenIData(dv.children, dirPath)
+                menuInfos.push({
+                    menu_name: dv.menu_name,
+                    is_top_menu: 2,
+                    filename: dv.filename,
+                    url: dv.url,
+                    dir: `${parentDir}/${dv.filename}`,
+                    have_sub: 1,
+                    weight: dv.weight,
+                })
+                pushChildrenIData(dv.children, `${parentDir}/${dv.filename}`)
+            } else {
+                menuInfos.push({
+                    menu_name: dv.menu_name,
+                    is_top_menu: 2,
+                    filename: dv.filename,
+                    url: dv.url,
+                    dir: parentDir,
+                    have_sub: 2,
+                    weight: dv.weight,
+                })
             }
         }
     }
@@ -52,23 +61,31 @@
     function GetAllMenuInfo() {
         let tempMenuInfos = []
         tempMenuInfos = getNestedLiData(document.querySelector("#doc-201 > ul"))
-
-
-
+        console.log("tempMenuInfos=",tempMenuInfos)
         if (tempMenuInfos.length > 0) {
             for (let i = 0; i < tempMenuInfos.length; i++) {
                 const dv = tempMenuInfos[i]
-                let dirPath =  dv.filename
-                menuInfos.push({
-                    menu_name: dv.menu_name,
-                    url: dv.url,
-                    filename: dv.filename,
-                    file_path: `${dirPath}/_index.md`,
-                    index: dv.index,
-                    is_top: 1,
-                })
                 if (dv.children && dv.children.length > 0) {
-                    pushChildrenIData(dv.children, dirPath)
+                    menuInfos.push({
+                        menu_name: dv.menu_name,
+                        is_top_menu: 1,
+                        filename: dv.filename,
+                        url: dv.url,
+                        dir: dv.filename,
+                        have_sub: 1,
+                        weight: dv.weight,
+                    })
+                    pushChildrenIData(dv.children, dv.filename)
+                } else {
+                    menuInfos.push({
+                        menu_name: dv.menu_name,
+                        is_top_menu: 1,
+                        filename: dv.filename,
+                        url: dv.url,
+                        dir: "",
+                        have_sub: 2,
+                        weight: dv.weight,
+                    })
                 }
             }
         }

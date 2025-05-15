@@ -4,19 +4,23 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"github.com/before80/go/bs"
 	"github.com/before80/go/cfg"
 	"github.com/before80/go/contants"
 	"github.com/before80/go/js/mysqldJs"
 	"github.com/before80/go/lg"
+	"github.com/before80/go/next/mysqldNext"
 	"github.com/before80/go/pg"
 	"github.com/before80/go/res"
+	"github.com/before80/go/tr"
+	"github.com/before80/go/wind"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/proto"
-	"github.com/tailscale/win"
 	"os"
 	"path/filepath"
-	"slices"
+	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
@@ -55,16 +59,7 @@ func CloseInitFiles() {
 	}
 }
 
-type MenuInfo struct {
-	MenuName string `json:"menu_name"`
-	Filename string `json:"filename"`
-	FilePath string `json:"file_path"`
-	Url      string `json:"url"`
-	Index    int    `json:"index"`
-	IsTop    int    `json:"is_top"`
-}
-
-func GetAllMenuInfo(page *rod.Page, url string) (menuInfos []MenuInfo, err error) {
+func GetAllMenuInfo(page *rod.Page, url string) (menuInfos []mysqldNext.MenuInfo, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			err = fmt.Errorf("获取allMenuInfo时遇到错误：%v", r)
@@ -100,73 +95,79 @@ func GetAllMenuInfo(page *rod.Page, url string) (menuInfos []MenuInfo, err error
 	return
 }
 
-func DealMenuMdFile(surplus int, browserHwnd win.HWND, dirPrefix string, menuInfo MenuInfo, page *rod.Page) (err error) {
+func DealWithMenuPageData(threadIndex int, wg *sync.WaitGroup) {
+	var err error
+	hadWgDone := false
 	defer func() {
 		if r := recover(); r != nil {
-			err = fmt.Errorf("获取页面内容时遇到错误：%v", r)
+			lg.ErrorToFile(fmt.Sprintf("线程%d出现异常：%v\n", threadIndex, r))
+			lg.ErrorToFile(fmt.Sprintf("线程%d将退出\n", threadIndex))
+			if !hadWgDone {
+				lg.InfoToFile(fmt.Sprintf("在线程%d的defer中调用了wg.Done()\n", threadIndex))
+				wg.Done()
+			}
 		}
 	}()
-	if slices.Contains(didUrl, menuInfo.Url) {
-		lg.InfoToFileAndStdOut(fmt.Sprintf("之前已处理 %s - %s\n", menuInfo.MenuName, menuInfo.Url))
-		return
-	}
-	lg.InfoToFileAndStdOut(fmt.Sprintf("还有%d 正在处理 %s - %s\n", surplus, menuInfo.MenuName, menuInfo.Url))
+	preDir := cfg.Default.MySQLdPreFolderName
+	browser := bs.MyBrowserSlice[threadIndex].Browser
+	page := browser.MustPage()
 
-	err = preInitMdFile(dirPrefix, menuInfo)
-	if err != nil {
+	defer func() {
+		_ = page.Close()
+	}()
+	var pageTitle, chromePageWindowTitle string
+	var fpDst string
+	var result *proto.RuntimeRemoteObject
+	var hadInsetPageData bool
+	uniqueMdFilename := "do" + strconv.Itoa(threadIndex) + ".md"
+	relUniqueMdFilePath := filepath.Join("markdown", uniqueMdFilename)
+	typoraWindowTitle := uniqueMdFilename + " - Typora"
+	_, _ = pg.CreateFileIfNotExists(relUniqueMdFilePath)
+	absUniqueMdFilePath, _ := filepath.Abs(relUniqueMdFilePath)
+LabelForContinue:
+	hadInsetPageData = false
+	_ = tr.TruncFileContent(relUniqueMdFilePath)
+	date := time.Now().Format(time.RFC3339)
+	curMenu, isEnd := mysqldNext.GetNextMenuInfoFromQueue()
+	lg.InfoToFile(fmt.Sprintf("线程%d正要处理的menu=%v\n", threadIndex, curMenu))
+	if isEnd {
+		if !hadWgDone {
+			hadWgDone = true
+			lg.InfoToFile(fmt.Sprintf("线程%d中已设置hadWgDone = true，且调用了wg.Done()\n", threadIndex))
+			wg.Done()
+		}
 		return
 	}
-	page.MustNavigate(menuInfo.Url)
+
+	if curMenu.IsTopMenu == 1 {
+		if curMenu.HaveSub == 1 {
+			fpDst = filepath.Join(contants.OutputFolderName, preDir, curMenu.Filename, "_index.md")
+		} else {
+			fpDst = filepath.Join(contants.OutputFolderName, preDir, curMenu.Filename+".md")
+		}
+	} else {
+		if curMenu.HaveSub == 1 {
+			fpDst = filepath.Join(contants.OutputFolderName, preDir, curMenu.Dir, curMenu.Filename, "_index.md")
+		} else {
+			fpDst = filepath.Join(contants.OutputFolderName, preDir, curMenu.Dir, curMenu.Filename+".md")
+		}
+	}
+
+	// 判断md文件中是否已经插入内容
+	hadInsetPageData, err = pg.JudgeHadInsertPageData(fpDst, "> 收录时间：")
+	if hadInsetPageData {
+		lg.InfoToFileAndStdOut(fmt.Sprintf("%s之前已经插入过数据\n", curMenu.MenuName))
+		goto LabelForContinue
+	}
+
+	page.MustNavigate(curMenu.Url)
 	page.MustWaitLoad()
 
-	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, mysqldJs.ReplaceJs))
-	if err != nil {
-		return fmt.Errorf("在网页%s中执行mysqldJs.ReplaceJs遇到错误：%v", menuInfo.Url, err)
-	}
-
-	err = InsertDetailPageData(browserHwnd, dirPrefix, menuInfo)
-	if err != nil {
-		return
-	}
-
-	// 记录已经处理的url
-	res.MySQL.WriteStringAndFlush(fmt.Sprintf("%s\n", menuInfo.Url))
-	lg.InfoToFileAndStdOut(fmt.Sprintf("处理完毕 %s - %s\n", menuInfo.MenuName, menuInfo.Url))
-	return nil
-}
-
-func InsertDetailPageData(browserHwnd win.HWND, dirPrefix string, menuInfo MenuInfo) (err error) {
-	defer func() {
-		if r := recover(); r != nil {
-			err = fmt.Errorf("插入detailPage=%s数据时遇到错误：%v", menuInfo.Url, r)
-		}
-	}()
-
-	err = pg.DealUniqueMd(browserHwnd, menuInfo.Url, "detailPage")
-	if err != nil {
-		return err
-	}
-	mdFilePath := filepath.Join(contants.OutputFolderName, dirPrefix, menuInfo.FilePath)
-	err = pg.InsertAnyPageData(mdFilePath, cfg.Default.UniqueMdFilepath, "> 收录时间：")
-	return
-}
-
-func preInitMdFile(dirPrefix string, menuInfo MenuInfo) (err error) {
-	var mdF *os.File
-	mdFilePath := filepath.Join(contants.OutputFolderName, dirPrefix, menuInfo.FilePath)
-	dir := filepath.Dir(mdFilePath)
-	err = os.MkdirAll(dir, 0755)
-	if err != nil {
-		return fmt.Errorf("创建目录时出错: %w", err)
-	}
-	mdF, err = os.OpenFile(mdFilePath, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
-	if err != nil {
-		return fmt.Errorf("创建文件 %s 时出错: %w", mdFilePath, err)
-	}
-	defer mdF.Close()
-	date := time.Now().Format(time.RFC3339)
-	if menuInfo.IsTop == 1 {
-		_, err = mdF.WriteString(fmt.Sprintf(`+++
+	hadExist, _ := pg.CreateFileIfNotExists(fpDst)
+	_ = hadExist
+	mdF, _ := os.OpenFile(fpDst, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0666)
+	if curMenu.IsTopMenu == 1 {
+		_, _ = mdF.WriteString(fmt.Sprintf(`+++
 title = "%s"
 linkTitle = "%s"
 date = %s
@@ -176,14 +177,15 @@ isCJKLanguage = true
 draft = false
 [menu.main]
 	weight = %d
+
 +++
 
 > 原文：[%s](%s)
 >
 > 收录时间：%s
-`, menuInfo.MenuName, menuInfo.MenuName, date, "", menuInfo.Index*10, menuInfo.Url, menuInfo.Url, fmt.Sprintf("`%s`", date)))
+`, curMenu.MenuName, curMenu.MenuName, date, "", curMenu.Weight, curMenu.Url, curMenu.Url, fmt.Sprintf("`%s`", date)))
 	} else {
-		_, err = mdF.WriteString(fmt.Sprintf(`+++
+		_, _ = mdF.WriteString(fmt.Sprintf(`+++
 title = "%s"
 date = %s
 weight = %d
@@ -197,11 +199,35 @@ draft = false
 > 原文：[%s](%s)
 >
 > 收录时间：%s
-`, menuInfo.MenuName, date, menuInfo.Index*10, "", menuInfo.Url, menuInfo.Url, fmt.Sprintf("`%s`", date)))
+`, curMenu.MenuName, date, curMenu.Weight, "", curMenu.Url, curMenu.Url, fmt.Sprintf("`%s`", date)))
 	}
 
+	_ = mdF.Close()
+
+	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, mysqldJs.ReplaceJs))
 	if err != nil {
-		return fmt.Errorf("初始化%s文件时出错: %v", mdFilePath, err)
+		panic(fmt.Errorf("线程%d在网页%s中执行mysqldJs.ReplaceJs遇到错误：%v", threadIndex, curMenu.Url, err))
 	}
-	return nil
+	// 获取当前网页的title，在后面会用来查找该网页所在窗口的操作句柄
+	result, _ = page.Eval(`() => { return document.title }`)
+	pageTitle = result.Value.String()
+	chromePageWindowTitle = pageTitle + " - Google Chrome"
+
+	// 再次清空
+	_ = tr.TruncFileContent(relUniqueMdFilePath)
+
+	contentBytes, _ := wind.DoCopyAndPaste(threadIndex, absUniqueMdFilePath, typoraWindowTitle, chromePageWindowTitle, curMenu.Url)
+
+	if contentBytes == 0 {
+		lg.InfoToFile(fmt.Sprintf("线程%d发现复制网页%s的字节数为0，将加入到下一次进行重试", threadIndex, curMenu.Url))
+		mysqldNext.PushWaitDealMenuInfoToQueue([]mysqldNext.MenuInfo{curMenu})
+	} else {
+		lg.InfoToFile(fmt.Sprintf("线程%d正要处理Insert", threadIndex))
+		err = pg.InsertAnyPageData(fpDst, relUniqueMdFilePath, "> 收录时间：")
+		if err != nil {
+			panic(fmt.Errorf("线程%d在将网页%s中的内容插入到目标md文件时遇到错误：%v", threadIndex, curMenu.Url, err))
+		}
+	}
+
+	goto LabelForContinue
 }
