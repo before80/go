@@ -212,28 +212,43 @@ function replaceSectionDlDl(times) {
         console.log("curMustSetToHLevel=",curMustSetToHLevel)
         const div = document.createElement('div');
         // 处理dl下的dt
-        const dt = dl.querySelector(":scope > dt")
-        if (dt) {
-            const newH = document.createElement(`h${curMustSetToHLevel}`);
-            let anchor = ""
-            // 检查是否存在锚点
-            if (dt.querySelector(".headerlink")) {
-                const aE = dt.querySelector(".headerlink");
-                anchor = aE.href.trim().split("#")[1];
-                aE.remove(); // 移除原来的锚点链接
-            }
+        const dts = dl.querySelectorAll(":scope > dt")
+        if (dts.length > 0) {
+            dts.forEach((dt, dti) => {
+                const newH = document.createElement(`h${curMustSetToHLevel}`);
+                let anchor = ""
+                // 检查是否存在锚点
+                if (dt.querySelector(".headerlink")) {
+                    const aE = dt.querySelector(".headerlink");
+                    anchor = aE.href.trim().split("#")[1];
+                    aE.remove(); // 移除原来的锚点链接
+                } else if (dt.getAttribute("id")) {
+                    anchor = dt.getAttribute("id")
+                } else if (dl.getAttribute("id")) {
+                    anchor = dl.getAttribute("id")
+                }
 
-            // while (dt.firstChild) {
-            //     newH.appendChild(dt.firstChild)
-            // }
-            //
-            // newH.insertBefore(document.createTextNode("`"), newH.firstChild)
-            // newH.appendChild(document.createTextNode((anchor ? `{#${anchor}}` : "") + "`"))
+                // while (dt.firstChild) {
+                //     newH.appendChild(dt.firstChild)
+                // }
+                //
+                // newH.insertBefore(document.createTextNode("`"), newH.firstChild)
+                // newH.appendChild(document.createTextNode((anchor ? `{#${anchor}}` : "") + "`"))
 
-            // 设置新标题的内容
-            const title = dt.textContent.trim();
-            newH.textContent = `\`${title}\`` + (anchor ? `{#${anchor}}` : "");
-            div.appendChild(newH);
+                // 设置新标题的内容
+                const title = dt.textContent.trim()
+                if (dts.length > 1) {
+                    if (dti === 0) {
+                        newH.textContent = `\`${title}\`` + (anchor ? `{#${anchor}}` : "")
+                    } else {
+                        newH.textContent = `\`${title}\``
+                    }
+                } else {
+                    newH.textContent = `\`${title}\`` + (anchor ? `{#${anchor}}` : "")
+                }
+
+                div.appendChild(newH);
+            })
         }
         // 处理dl下的dd
         // 处理 dl 下的 dd

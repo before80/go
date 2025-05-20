@@ -1,0 +1,8 @@
+cp
+curl
+find
+ln
+ls
+pwd
+tar
+whoami
