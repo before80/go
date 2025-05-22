@@ -9,7 +9,18 @@
                 const url = a.href.trim()
                 let urls = url.split("/")
                 const filename = urls[urls.length - 1].replace(/\.php$/, "").replace(/\./g,"_")
-
+                // if (filename === "funcref") {
+                //     menuInfos.push({
+                //         menu_name: menuName,
+                //         filename: filename,
+                //         is_top_menu: 1,
+                //         dir : "",
+                //         url: url,
+                //         weight: i + 1
+                //     })
+                // } else {
+                //
+                // }
                 menuInfos.push({
                     menu_name: menuName,
                     filename: filename,
@@ -18,6 +29,7 @@
                     url: url,
                     weight: i + 1
                 })
+
             }
         })
     }

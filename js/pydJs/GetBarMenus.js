@@ -20,17 +20,28 @@
                     .replace(/[\.\/]/g, '_')
 
                 if (!exists[url]) {
-                    if (i === 0 || (i > 0 && ["术语对照表", "Python 的历史与许可证"].includes(menu_name))) {
+                    if (menu_name === "Python 3.13 有什么新变化？") {
                         menuInfos.push({
-                            menu_name: menu_name,
-                            top_menu_name: menu_name,
+                            menu_name: "Python的新变化",
+                            top_menu_name: "Python的新变化",
                             is_top_menu: 1,
-                            filename: filename,
+                            filename: "whatsnew",
                             weight: (i + 1) * 10,
-                            dir: filename,
-                            url: url,
+                            dir: "whatsnew",
+                            url: "https://docs.python.org/zh-cn/3.13/whatsnew/index.html",
                         })
-                        exists[url] = true
+                        exists["https://docs.python.org/zh-cn/3.13/whatsnew/index.html"] = true
+                    } else if (i === 0 || (i > 0 && ["术语对照表", "Python 的历史与许可证"].includes(menu_name))) {
+                        // menuInfos.push({
+                        //     menu_name: menu_name,
+                        //     top_menu_name: menu_name,
+                        //     is_top_menu: 1,
+                        //     filename: filename,
+                        //     weight: (i + 1) * 10,
+                        //     dir: filename,
+                        //     url: url,
+                        // })
+                        // exists[url] = true
                     }
                 }
             })

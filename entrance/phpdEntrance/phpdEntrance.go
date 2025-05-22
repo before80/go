@@ -22,8 +22,8 @@ func Do(cmd *cobra.Command) {
 
 	var err error
 	defer func() {
-		if err != nil {
-			lg.ErrorToFile(fmt.Sprintf("%v", err))
+		if r := recover(); r != nil {
+			lg.ErrorToFile(fmt.Sprintf("%v", r))
 		}
 	}()
 	defaults.ResetWith("show=true")
@@ -34,6 +34,7 @@ func Do(cmd *cobra.Command) {
 	defer browser.MustClose()
 	// 创建新页面
 	page = browser.MustPage()
+	lg.InfoToFileAndStdOut("run here 1")
 	var barMenuInfos []phpdNext.MenuInfo
 	barMenuInfos, err = phpdPg.GetAllFirstMenuInfo(page, cfg.Default.PHPdEntranceUrl)
 	phpdNext.PushWaitDealMenuInfoToQueue(barMenuInfos)
@@ -44,7 +45,7 @@ func Do(cmd *cobra.Command) {
 		lg.InfoToFileAndStdOut(fmt.Sprintf("获取线程数标志时出错：%v\n", err))
 		return
 	}
-
+	lg.InfoToFileAndStdOut("run here 2")
 	bs.MyBrowserSlice = make([]bs.MyBrowser, threadNum)
 	// 实例化多个 *rod.Browser 实例
 	for j := 0; j < threadNum; j++ {
