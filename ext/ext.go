@@ -185,17 +185,6 @@ func CreateJsHijackExtension(absExtensionParentDir, subCacheFolderName string, f
 	  }
 	},
 	{
-	  "id": 5,
-	  "priority": 1,
-	  "action": {
-		"type": "block"		
-	  },
-	  "condition": {
-		"urlFilter": "https://shop.dovolks.jp",
-		"resourceTypes": ["image"]
-	  }
-	},
-	{
 	  "id": 6,
 	  "priority": 1,
 	  "action": {
@@ -205,18 +194,7 @@ func CreateJsHijackExtension(absExtensionParentDir, subCacheFolderName string, f
 		"urlFilter": "https://ajax.googleapis.com",
 		"resourceTypes": ["script"]
 	  }
-	},
-	{
-	  "id": 7,
-	  "priority": 1,
-	  "action": {
-		"type": "block"		
-	  },
-	  "condition": {
-		"urlFilter": "https://pi.pardot.com",
-		"resourceTypes": ["script"]
-	  }
-	},
+	},	
 	{
 	  "id": 8,
 	  "priority": 1,
