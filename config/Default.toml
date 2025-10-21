@@ -52,3 +52,5 @@ interval_second = 5
 browser_width = 1200
 # 浏览器高度
 browser_height = 1500
+
+special_version_chromium_path = "G:\\chromium_138_0_7204_49"

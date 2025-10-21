@@ -2,8 +2,9 @@ package cfg
 
 import (
 	"fmt"
-	"github.com/spf13/viper"
 	"time"
+
+	"github.com/spf13/viper"
 )
 
 var canUseUniqueKeySlice = []string{"A"}
@@ -34,6 +35,7 @@ type DefaultConfig struct {
 	UniqueMdFilepath              string `mapstructure:"unique_md_filepath"`
 	BrowserWidth                  int    `mapstructure:"browser_width"`
 	BrowserHeight                 int    `mapstructure:"browser_height"`
+	SpecialVersionChromiumPath    string `special_version_chromium_path`
 }
 
 var Default DefaultConfig

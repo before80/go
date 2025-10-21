@@ -2,6 +2,11 @@ package godEntrance
 
 import (
 	"fmt"
+	"net/http"
+	"strconv"
+	"sync"
+	"time"
+
 	"github.com/before80/go/bs"
 	"github.com/before80/go/cfg"
 	"github.com/before80/go/entrance"
@@ -11,9 +16,6 @@ import (
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/defaults"
 	"github.com/spf13/cobra"
-	"strconv"
-	"sync"
-	"time"
 )
 
 func Do(cmd *cobra.Command) {
@@ -59,7 +61,13 @@ func Do(cmd *cobra.Command) {
 			}
 		}
 		entrance.OpenUniqueMdFile(j)
-		bs.MyBrowserSlice[j] = bs.MyBrowser{Browser: browser1, Ok: true, Index: j}
+		router := browser1.HijackRequests()
+		router.MustAdd("https://www.google-analytics.com/analytics.js", func(ctx *rod.Hijack) {
+			_ = ctx.LoadResponse(http.DefaultClient, true)
+			ctx.Response.SetBody("")
+		})
+		go router.Run()
+		bs.MyBrowserSlice[j] = bs.MyBrowser{Browser: browser1, Ok: true, Index: j, Router: router}
 	}
 
 	var wg sync.WaitGroup

@@ -3,7 +3,15 @@ package godPg
 import (
 	"encoding/json"
 	"fmt"
+	"os"
+	"path/filepath"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
+
 	"github.com/before80/go/bs"
+	"github.com/before80/go/cfg"
 	"github.com/before80/go/contants"
 	"github.com/before80/go/js/godJs"
 	"github.com/before80/go/lg"
@@ -13,12 +21,6 @@ import (
 	"github.com/before80/go/wind"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/proto"
-	"os"
-	"path/filepath"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
 )
 
 // GetAllStdPkgInfo 获取所有标准库的pkg信息
@@ -68,6 +70,8 @@ func DealWithMenuPageData(threadIndex int, wg *sync.WaitGroup) {
 	preDir := "go_std"
 	browser := bs.MyBrowserSlice[threadIndex].Browser
 	page := browser.MustPage()
+	page.MustSetViewport(cfg.Default.BrowserWidth, cfg.Default.BrowserHeight, 1, false)
+	//page.SetViewport()
 
 	defer func() {
 		_ = page.Close()
@@ -170,11 +174,35 @@ draft = false
 	}
 
 	_ = mdF.Close()
+	//time.Sleep(10 * time.Second)
 
-	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, godJs.ReplaceJs))
+	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, `
+	const des = document.querySelectorAll(".Documentation-exampleDetails");
+    const noTopHLevel = 2;
+    const maxIterations = 100; // 最大迭代次数
+    if (des.length > 0) {
+        console.log("des.length=",des.length)
+        des.forEach(de => {
+            const deh = de.querySelector(":scope > .Documentation-exampleDetailsHeader");
+            deh.click();
+            const deb = de.querySelector(":scope > .Documentation-exampleDetailsBody");
+			console.log("deh=",deh);
+			console.log("deb=",deb);        
+		})
+	}`))
 	if err != nil {
+		lg.ErrorToFileAndStdOutWithSleepSecond("出现错误1", 1)
 		panic(fmt.Errorf("线程%d在网页%s中执行godJs.ReplaceJs遇到错误：%v", threadIndex, curMenu.Url, err))
 	}
+
+	// time.Sleep(1000 * time.Second)
+	_, err = page.Eval(fmt.Sprintf(`() => { %s }`, godJs.ReplaceJs))
+	if err != nil {
+		lg.ErrorToFileAndStdOutWithSleepSecond("出现错误2", 10000)
+		panic(fmt.Errorf("线程%d在网页%s中执行godJs.ReplaceJs遇到错误：%v", threadIndex, curMenu.Url, err))
+	}
+
+	//time.Sleep(1000 * time.Second)
 	// 获取当前网页的title，在后面会用来查找该网页所在窗口的操作句柄
 	result, _ = page.Eval(`() => { return document.title }`)
 	pageTitle = result.Value.String()

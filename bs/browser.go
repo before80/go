@@ -2,16 +2,17 @@ package bs
 
 import (
 	"fmt"
+	"os"
+	"path/filepath"
+	"runtime"
+	"time"
+
 	"github.com/before80/go/cfg"
 	"github.com/before80/go/contants"
 	"github.com/before80/go/ext"
 	"github.com/before80/go/lg"
 	"github.com/go-rod/rod"
 	"github.com/go-rod/rod/lib/launcher"
-	"os"
-	"path/filepath"
-	"runtime"
-	"time"
 )
 
 type MyBrowser struct {
@@ -97,34 +98,108 @@ func GetBrowser(subCacheFolderName string) (browser *rod.Browser, err error) {
 		extensionStr = fmt.Sprintf("%s", absPathToProxyAuthExtension)
 	}
 
-	// Set("disable-component-update", "true")    // 禁止插件自动更新
-	if path, exists := launcher.LookPath(); exists {
-		lg.InfoToFile(fmt.Sprintf("当前使用的浏览器所在路径是：%s\n", path))
+	// spChromePath := fmt.Sprintf(`%s\\chrome.exe`, cfg.Default.SpecialVersionChromiumPath)
+	spChromePath := `G:\chromium_138_0_7204_49\chrome.exe`
+	l = launcher.New().Bin(spChromePath).
+		Set("window-size", fmt.Sprintf("%d,%d", cfg.Default.BrowserWidth, cfg.Default.BrowserHeight)).
+		Set("user-data-dir", folderPath).
+		Set("extensions-on-chrome-urls", "true"). // 允许在 chrome:// 页面运行
+		Set("disable-extensions", "false").
+		Set("disable-component-update", "true").
+		Set("load-extension", extensionStr).
+		Set("disable-extensions-except", extensionStr).
+		Set("disable-extensions-http-throttling", "false").
+		Set("allow-insecure-localhost", "1").
+		Set("profile.default_content_setting_values.insecure_content", "1").
+		//Set("auto-open-devtools-for-tabs", "true").
+		//Set("disable-features", "ExtensionsNetworkBlocking"). // 禁用扩展网络限制)
+		Set("disable-features", "ExtensionsNetworkBlocking,ManifestV3Only").
+		Set("no-first-run", "true").             // 避免首次运行提示
+		Set("no-default-browser-check", "true"). // 跳过默认浏览器检查
 
-		l = launcher.New().Bin(path).
-			Set("window-size", fmt.Sprintf("%d,%d", cfg.Default.BrowserWidth, cfg.Default.BrowserHeight)).
-			Set("user-data-dir", folderPath).
-			Set("load-extension", extensionStr).
-			Set("disable-extensions-http-throttling", "false").
-			Set("allow-insecure-localhost", "1").
-			Set("profile.default_content_setting_values.insecure_content", "1").
-			//Set("auto-open-devtools-for-tabs", "true").
-			Set("disable-features", "ExtensionsNetworkBlocking") // 禁用扩展网络限制)
+		Set("noerrdialogs", "").
+		Set("safebrowsing-disable-auto-update", "1").
+		Set("disable-background-networking", "1").
+		Set("disable-renderer-backgrounding", "1").
+		Set("disable-background-timer-throttling", "1").
+		Set("disable-client-side-phishing-detection", "1").
+		Set("disable-sync", "1").
+		Set("metrics-recording-only", "1").
+		Set("disable-default-apps", "1").
+		Set("disable-popup-blocking", "1").
+		Set("disable-extensions-file-access-check", "1"). // ⚠️ 防止 Chrome 文件访问插件安全检查
+		Set("disable-hang-monitor", "1").
+		Set("disable-prompt-on-repost", "1")
 
-		//Set("no-sandbox"). // 禁用沙盒
-	} else {
-		lg.InfoToFile(fmt.Sprintf("当前使用的是临时下载的浏览器\n"))
-		l = launcher.New().
-			Set("window-size", fmt.Sprintf("%d,%d", cfg.Default.BrowserWidth, cfg.Default.BrowserHeight)).
-			Set("user-data-dir", folderPath).
-			Set("load-extension", extensionStr).
-			Set("disable-extensions-http-throttling", "false").
-			Set("allow-insecure-localhost", "1").
-			Set("profile.default_content_setting_values.insecure_content", "1").
-			//Set("auto-open-devtools-for-tabs", "true").
-			Set("disable-features", "ExtensionsNetworkBlocking") // 禁用扩展网络限制)
-		//Set("no-sandbox"). // 禁用沙盒
-	}
+	//if path, exists := launcher.LookPath(); exists {
+	//	lg.InfoToFile(fmt.Sprintf("当前使用的浏览器所在路径是：%s\n", path))
+	//
+	//	l = launcher.New().Bin(path).
+	//		Set("window-size", fmt.Sprintf("%d,%d", cfg.Default.BrowserWidth, cfg.Default.BrowserHeight)).
+	//		Set("user-data-dir", folderPath).
+	//		Set("extensions-on-chrome-urls", "true"). // 允许在 chrome:// 页面运行
+	//		Set("disable-extensions", "false").
+	//		Set("disable-component-update", "true").
+	//		Set("load-extension", extensionStr).
+	//		Set("disable-extensions-except", extensionStr).
+	//		Set("disable-extensions-http-throttling", "false").
+	//		Set("allow-insecure-localhost", "1").
+	//		Set("profile.default_content_setting_values.insecure_content", "1").
+	//		//Set("auto-open-devtools-for-tabs", "true").
+	//		//Set("disable-features", "ExtensionsNetworkBlocking"). // 禁用扩展网络限制)
+	//		Set("disable-features", "ExtensionsNetworkBlocking,ManifestV3Only").
+	//		Set("no-first-run", "true").             // 避免首次运行提示
+	//		Set("no-default-browser-check", "true"). // 跳过默认浏览器检查
+	//
+	//		Set("noerrdialogs", "").
+	//		Set("safebrowsing-disable-auto-update", "1").
+	//		Set("disable-background-networking", "1").
+	//		Set("disable-renderer-backgrounding", "1").
+	//		Set("disable-background-timer-throttling", "1").
+	//		Set("disable-client-side-phishing-detection", "1").
+	//		Set("disable-sync", "1").
+	//		Set("metrics-recording-only", "1").
+	//		Set("disable-default-apps", "1").
+	//		Set("disable-popup-blocking", "1").
+	//		Set("disable-extensions-file-access-check", "1"). // ⚠️ 防止 Chrome 文件访问插件安全检查
+	//		Set("disable-hang-monitor", "1").
+	//		Set("disable-prompt-on-repost", "1")
+	//
+	//	//Set("no-sandbox"). // 禁用沙盒
+	//} else {
+	//	lg.InfoToFile(fmt.Sprintf("当前使用的是临时下载的浏览器\n"))
+	//	l = launcher.New().
+	//		Set("window-size", fmt.Sprintf("%d,%d", cfg.Default.BrowserWidth, cfg.Default.BrowserHeight)).
+	//		Set("user-data-dir", folderPath).
+	//		Set("extensions-on-chrome-urls", "true"). // 允许在 chrome:// 页面运行
+	//		Set("disable-extensions", "false").
+	//		Set("disable-component-update", "true").
+	//		Set("load-extension", extensionStr).
+	//		Set("disable-extensions-except", extensionStr).
+	//		Set("disable-extensions-http-throttling", "false").
+	//		Set("allow-insecure-localhost", "1").
+	//		Set("profile.default_content_setting_values.insecure_content", "1").
+	//		//Set("auto-open-devtools-for-tabs", "true").
+	//		//Set("disable-features", "ExtensionsNetworkBlocking"). // 禁用扩展网络限制)
+	//		Set("disable-features", "ExtensionsNetworkBlocking,ManifestV3Only").
+	//		Set("no-first-run", "true").             // 避免首次运行提示
+	//		Set("no-default-browser-check", "true"). // 跳过默认浏览器检查
+	//
+	//		Set("noerrdialogs", "").
+	//		Set("safebrowsing-disable-auto-update", "1").
+	//		Set("disable-background-networking", "1").
+	//		Set("disable-renderer-backgrounding", "1").
+	//		Set("disable-background-timer-throttling", "1").
+	//		Set("disable-client-side-phishing-detection", "1").
+	//		Set("disable-sync", "1").
+	//		Set("metrics-recording-only", "1").
+	//		Set("disable-default-apps", "1").
+	//		Set("disable-popup-blocking", "1").
+	//		Set("disable-extensions-file-access-check", "1"). // ⚠️ 防止 Chrome 文件访问插件安全检查
+	//		Set("disable-hang-monitor", "1").
+	//		Set("disable-prompt-on-repost", "1")
+	//	//Set("no-sandbox"). // 禁用沙盒
+	//}
 
 	//defaults.Show = false
 

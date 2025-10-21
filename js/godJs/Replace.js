@@ -218,11 +218,18 @@ function replaceExampleCodeBlock() {
     const noTopHLevel = 2
     const maxIterations = 100; // 最大迭代次数
     if (des.length > 0) {
+        console.log("des.length=",des.length)
         des.forEach(de => {
-            const deb = de.querySelector(".Documentation-exampleDetailsBody")
+            const deh = de.querySelector(":scope > .Documentation-exampleDetailsHeader")
+            deh.click();
+            const deb = de.querySelector(":scope > .Documentation-exampleDetailsBody")
             if (deb) {
-                const ta = deb.querySelector(":scope > textarea")
+                console.log("deb=",deb)
+                // const ta = deb.querySelector(":scope > textarea")
+                const ta = deb.querySelector("textarea")
+                console.log("ta === null",ta === null)
                 const pre = deb.querySelector(":scope > pre")
+                // const pre = deb.querySelector("pre")
                 let foundH = false
                 let curMustSetHLevel = 3
                 let anchor = ""
@@ -346,4 +353,5 @@ addHeaderAnchorAndRemoveHeaderLink();
 modifyInTypeFuncHeaderLevel();
 replaceDocumentationDeprecatedTag();
 replaceExistCodeBlock();
-replaceExampleCodeBlock();
+// replaceExampleCodeBlock();
+

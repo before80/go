@@ -2,11 +2,6 @@ package wind
 
 import (
 	"fmt"
-	"github.com/atotto/clipboard"
-	"github.com/before80/go/lg"
-	"github.com/go-vgo/robotgo"
-	"github.com/gonutz/w32/v3"
-	"github.com/tailscale/win"
 	"math"
 	"os/exec"
 	"runtime"
@@ -14,6 +9,12 @@ import (
 	"sync"
 	"syscall"
 	"time"
+
+	"github.com/atotto/clipboard"
+	"github.com/before80/go/lg"
+	"github.com/go-vgo/robotgo"
+	"github.com/gonutz/w32/v3"
+	"github.com/tailscale/win"
 )
 
 type windowSearchParams struct {

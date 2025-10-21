@@ -3,11 +3,12 @@ package ext
 import (
 	"archive/zip"
 	"fmt"
-	"github.com/before80/go/cfg"
-	"github.com/before80/go/contants"
 	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/before80/go/cfg"
+	"github.com/before80/go/contants"
 )
 
 // CreateProxyAuthExtension 创建代理扩展
@@ -128,10 +129,8 @@ func CreateJsHijackExtension(absExtensionParentDir, subCacheFolderName string, f
 	"https://www.google-analytics.com/*",	
 	"https://www.gstatic.com/*",	
 	"https://www.google.com/*",
-	"https://shop.dovolks.jp/*",
 	"https://fonts.gstatic.com/*",
 	"https://ajax.googleapis.com/*",
-	"https://pi.pardot.com/*"
   ],
   "background": {
 	"service_worker": "background.js"
